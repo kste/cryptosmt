@@ -32,13 +32,13 @@ class characteristicSearch:
         """
         print "Starting search for {} - Rounds: {} Wordsize: {}".format(cipher.getName(), parameters["rounds"], parameters["wordsize"])
         weight = parameters["sweight"]
-        fixedVariables = parameters["fixedVariables"]
         
         while(True):
             print "Weight: {}".format(weight)
             cipherParameters = cipher.constructParametersList(parameters["rounds"], parameters["wordsize"], weight)
             cipherParameters.append(parameters["iterative"])
-            cipherParameters.append(fixedVariables)
+            cipherParameters.append(parameters.get("fixedVariables"))
+            cipherParameters.append(parameters.get("blockedCharacteristics"))
             
             cipher.createSTP("tmp/{}.stp".format(cipher.getName()), cipherParameters)
             outputOfProcess = subprocess.check_output([self.pathToSTP, "--cryptominisat", "tmp/{}.stp".format(cipher.getName())])

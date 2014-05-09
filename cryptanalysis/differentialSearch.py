@@ -43,7 +43,8 @@ class differentialSearch:
         while(True):                            
             cipherParameters = cipher.constructParametersList(parameters["rounds"], parameters["wordsize"], weight)
             cipherParameters.append(parameters["iterative"])
-            cipherParameters.append(parameters["fixedVariables"])
+            cipherParameters.append(parameters.get("fixedVariables"))
+            cipherParameters.append(parameters.get("blockedCharacteristics"))
             
             # Start STP
             cipher.createSTP("tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile), cipherParameters)
