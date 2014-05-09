@@ -18,18 +18,7 @@ class parseSTPoutput(object):
             cls._instance = super(parseSTPoutput, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
-    def printSTPOutputAsCharacteristic(self, output, characteristicFormat, rounds):
-        """
-        Takes the STP output and prints it in table form. 
-        characteristicFormat gives the order of the words to print
-        Example:
-        characteristicFormat = ['x', 'y', 'p']
-        
-        x        y        p
-        0x1001   0x0000   0x1001
-        0x1001   0x0000   0x1001
-        ...
-        """
+    def getCharacteristicFromSTPOutput(self, output, characteristicFormat, rounds):
         #print output
         
         characteristic = {}
@@ -42,8 +31,23 @@ class parseSTPoutput(object):
                 varName = tmp.group(1)
                 varValue = tmp.group(2)
                 characteristic[varName] = varValue
+                
+        return differentialCharacteristic.differentialCharacteristic(characteristic, characteristicFormat, rounds)
+    
+    def printSTPOutputAsCharacteristic(self, output, characteristicFormat, rounds):
+        """
+        Takes the STP output and prints it in table form. 
+        characteristicFormat gives the order of the words to print
+        Example:
+        characteristicFormat = ['x', 'y', 'p']
+        
+        x        y        p
+        0x1001   0x0000   0x1001
+        0x1001   0x0000   0x1001
+        ...
+        """
 
-        diffChar = differentialCharacteristic.differentialCharacteristic(characteristic, characteristicFormat, rounds)
+
+        diffChar = self.getCharacteristicFromSTPOutput(output, characteristicFormat, rounds)
         diffChar.printText()
-        print "Total Weight: " + str(int(weight, 2))
         return

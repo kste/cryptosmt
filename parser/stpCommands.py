@@ -19,6 +19,28 @@ class StpCommands(object):
             cls._instance = super(StpCommands, cls).__new__(cls, *args, **kwargs)
         return cls._instance
     
+    def blockCharacteristic(self, file, characteristic, wordsize):
+        """
+        Excludes this characteristic from being found.
+        """
+        #print characteristic.characteristicData
+        # Only add state words (x, y)
+        
+        filteredWords = {k:v for k,v in characteristic.characteristicData.iteritems() 
+                            if k.startswith('x') or k.startswith('y')}
+        #print filteredWords
+        
+        blockingStatement = "ASSERT(NOT("
+        
+        for key, value in filteredWords.iteritems():
+            blockingStatement += "BVXOR({}, {}) | ".format(key, value)
+        
+        blockingStatement = blockingStatement[:-2] + ") = 0hex{});".format("0"*(wordsize / 4)) 
+        
+        #print blockingStatement
+        file.write(blockingStatement)
+        return
+    
     def setupQuery(self, file):
         """
         Adds the query and printing of counterexample to the stp file.

@@ -38,7 +38,10 @@ def startTool(toolParameters):
         search.findMinWeightCharacteristic(cipher, toolParameters)
    
     if(toolParameters["mode"] == 1):
-        search.searchCharacteristics(cipher, toolParameters) 
+        search.searchCharacteristics(cipher, toolParameters)
+    
+    if(toolParameters["mode"] == 2):
+        search.findAllCharacteristics(cipher, toolParameters) 
     
     if(toolParameters["mode"] == 4):
         searchDifferential.computeProbabilityOfDifferentials(cipher, toolParameters)
@@ -83,6 +86,7 @@ def main():
     parser.add_argument('--wordsize', nargs=1, help="Wordsize used in the cipher.")
     parser.add_argument('--mode', nargs=1, help="0 = search characteristic for fixed round\n" + 
                                                 "1 = search characteristic for all rounds starting at the round specified\n" +
+                                                "2 = search all characteristic for a specific weight\n" +
                                                 "4 = determine the probability of the differential\n")
     parser.add_argument('--iterative', action="store_true", help="Only search for iterative characteristics")
     parser.add_argument('--inputfile', nargs=1, help="Use an yaml input file to read the parameters.")
@@ -133,7 +137,7 @@ def main():
         params["mode"] = int(args.mode[0])
         
     if(args.iterative):
-        params["iterative"] = args.iterative[0]
+        params["iterative"] = args.iterative
         
     #check parameter sanity and set default values
     checkParameters(params)

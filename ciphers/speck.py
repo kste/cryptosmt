@@ -31,7 +31,7 @@ class SpeckCipher(AbstractCipher):
             # w = weight
             x = ["x{}".format(i) for i in range(rounds + 1)]
             y = ["y{}".format(i) for i in range(rounds + 1)]
-            w = ["w{}".format(i) for i in range(rounds + 1)]
+            w = ["w{}".format(i) for i in range(rounds)]
         
         
             StpCommands().setupVariables(file, x, wordsize)

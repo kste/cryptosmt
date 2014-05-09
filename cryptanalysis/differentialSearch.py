@@ -32,7 +32,8 @@ class differentialSearch:
     def computeProbabilityOfDifferentials(self, cipher, parameters):
         """
         Computes the probability of the differential by iteratively 
-        summing up all characteristics of a specific weight.
+        summing up all characteristics of a specific weight using
+        a SAT solver.
         """
         randomStringForTMPFile = '%030x' % random.randrange(16**30)
         weight = parameters["sweight"]

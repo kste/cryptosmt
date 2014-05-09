@@ -20,7 +20,7 @@ class differentialCharacteristic:
         self.printFormat = format 
         self.numberOfRounds = rounds
         return
-    
+      
     def printText(self):
         '''
         Prints a table from the data structure.
@@ -34,30 +34,39 @@ class differentialCharacteristic:
             tmpRow = []
             for word in self.printFormat:
                 if(round == -1):
-                    #Print Header
                     header.append(word)
                 else:
                     try:
-                        tmpRow.append(self.characteristicData[word+str(round)])
+                        # Add word to table
+                        if(word == 'w'):
+                            weight = self.characteristicData[word+str(round)]
+                            tmpRow.append("-" + str(bin(int(weight, 16)).count('1')))
+                        else:
+                            tmpRow.append(self.characteristicData[word+str(round)])
                     except KeyError, e:
-                        tmpRow.append("no value")
+                        tmpRow.append("none")
             if(tmpRow):
                 data.append(tmpRow)
             
         # Print 
         columnWidth = max(len(s) for s in list(itertools.chain.from_iterable(data))) + 2
-        headerString = ""
+        headerString = "Rounds\t"
         dataString = ""
+        currentRow = 0
+        
         for entry in header:
             headerString += entry.ljust(columnWidth)
         for row in data:
+            dataString += str(currentRow) + '\t'
+            currentRow += 1
             for entry in row:
                 dataString += entry.ljust(columnWidth)
             dataString += '\n'
             
+            
         
         print headerString
-        print "-"*columnWidth*len(header)
+        print "-"*len(headerString)
         print dataString
         
         return

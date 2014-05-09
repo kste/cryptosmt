@@ -26,6 +26,7 @@ class SimonCipher(AbstractCipher):
         weight = cipherParameters[5]
         isIterative = cipherParameters[6]
         varsFixed = cipherParameters[7]
+        blockedCharacteristics = cipherParameters[8]
         
         with open(filename, 'w') as file:
             file.write("% Input File for STP\n% Simon w={} alpha={} beta={} gamma={} rounds={}\n\n\n".format(wordsize, rotAlpha, rotBeta, rotGamma, rounds))
@@ -61,6 +62,10 @@ class SimonCipher(AbstractCipher):
             if(varsFixed):
                 for key, value in varsFixed.iteritems():
                     StpCommands().assertVariableValue(file, key, value)
+                    
+            if(blockedCharacteristics):
+                for char in blockedCharacteristics:
+                    StpCommands().blockCharacteristic(file, char, wordsize)
             
             StpCommands().setupQuery(file)
 

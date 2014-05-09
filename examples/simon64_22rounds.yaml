@@ -2,13 +2,13 @@
 # for Simon64 and 22 rounds
 ---
 cipher: simon
-sweight: 74
+sweight: 72
 rounds: 22
 wordsize: 32
 mode: 4
 fixedVariables:
-- x0: "0x00000440"
-- y0: "0x00001880"
-- x22: "0x00000440"
-- y22: "0x00000100"
+- x0: "0x00088000"
+- y0: "0x00200000"
+- x22: "0x00088000"
+- y22: "0x00020000"
 ...
