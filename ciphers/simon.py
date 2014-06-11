@@ -82,6 +82,13 @@ class SimonCipher(AbstractCipher):
         file.write(self.getStringForSimonRound(x_in, y_in, x_out, y_out, and_out, w, rotAlpha, rotBeta, rotGamma, wordsize) + '\n')
         return
     
+    def getDependentBitsForAND(self, x_in, wordsize):
+        "rotate_right(diff, 6) & (~rotate_left(diff, 1)) & rotate_left(diff, 8);"
+        command = "({0} & (~{1}) & {2})".format(StpCommands().getStringRightRotate(x_in, 6, wordsize),
+                                              StpCommands().getStringLeftRotate(x_in, 1, wordsize),
+                                              StpCommands().getStringLeftRotate(x_in, 8, wordsize));
+        return command
+    
     def getStringForSimonRound(self, x_in, y_in, x_out, y_out, and_out, w, rotAlpha, rotBeta, rotGamma, wordsize):
         """
         Returns a string representing one round of Simon in STP.
@@ -98,6 +105,13 @@ class SimonCipher(AbstractCipher):
         command += "ASSERT(" + StpCommands().getStringForAndDifferential(StpCommands().getStringLeftRotate(x_in, rotAlpha, wordsize),
                                                             StpCommands().getStringLeftRotate(x_in, rotBeta, wordsize),
                                                             and_out) + " = 0hex{});\n".format("f"*(wordsize / 4))
+                  
+                  
+        #Deal with dependent inputs
+        dependentRotated = StpCommands().getStringLeftRotate(self.getDependentBitsForAND(x_in, wordsize),7,wordsize)
+        andoutRotatedMasked = StpCommands().getStringRightRotate("({0} & {1})".format(x_in,dependentRotated), 7, wordsize)
+        
+        command += "ASSERT(BVXOR({0} & {1}, {2}) = 0hex{3});\n".format(x_in, self.getDependentBitsForAND(x_in, wordsize), andoutRotatedMasked, "0"*(wordsize / 4))          
                                                             
         #Assert XORs
         command += "ASSERT(" + x_out + " = "
@@ -107,11 +121,21 @@ class SimonCipher(AbstractCipher):
         command += "));\n"
         
         #For weight computation
-        command += "ASSERT({0} = ({1} | {2} | {3})".format(w, StpCommands().getStringLeftRotate(x_in, rotAlpha, wordsize),
-                                                            StpCommands().getStringLeftRotate(x_in, rotBeta, wordsize),
-                                                            and_out)
-        command += ");" 
+        #command += "ASSERT({0} = ({1} | {2} | {3}));".format(w, StpCommands().getStringLeftRotate(x_in, rotAlpha, wordsize),
+        #                                                    StpCommands().getStringLeftRotate(x_in, rotBeta, wordsize),
+        #                                                    and_out)
         
+        #Improved weight computation
+        #command += "ASSERT({0} = BVXOR(~{1} & ~{2} & {3}, {2}));".format(w, StpCommands().getStringRightRotate(x_in, 7, wordsize),
+        #                                                                  x_in, StpCommands().getStringRightRotate(x_in, 14, wordsize))
+                                                                          
+        #More improved :)
+        command += "ASSERT({0} = (IF {2} = 0x{4} THEN BVSUB({5},0x{4},0x1) ELSE BVXOR(~{1} & ~{2} & {3}, {2}) ENDIF));".format(w, StpCommands().getStringRightRotate(x_in, 7, wordsize),
+                                                                          x_in, StpCommands().getStringRightRotate(x_in, 14, wordsize),
+                                                                          "f"*(wordsize / 4), wordsize);
+        
+                                                                  
+                
         return command
 
     

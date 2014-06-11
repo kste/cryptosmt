@@ -24,6 +24,39 @@ class characteristicSearch:
         '''
         self.pathToSTP = stp
         self.stpParser = parseSTPoutput.parseSTPoutput()
+        
+    def findBestConstants(self, cipher, parameters):
+        constants = [[0 for x in xrange(parameters["wordsize"])] for x in xrange(parameters["wordsize"])] 
+        
+        randomStringForTMPFile = '%030x' % random.randrange(16**30)
+        #fix one constant
+        for alpha in range(1, parameters["wordsize"]):    
+            for beta in range(1, parameters["wordsize"]):
+                print "Alpha {} Beta {}".format(alpha, beta)
+                weight = 0
+                while(True):
+                    weight += 1
+                    print "Weight: " + str(weight)
+                    cipherParameters = cipher.constructParametersList(parameters["rounds"], parameters["wordsize"], weight)
+                    #change constants
+                    cipherParameters[1] = alpha
+                    cipherParameters[2] = beta
+                    if(cipher.getName() == "simon"):
+                        cipherParameters[3] = 2
+                    cipherParameters.append(parameters["iterative"])
+                    cipherParameters.append(parameters.get("fixedVariables"))
+                    cipherParameters.append(parameters.get("blockedCharacteristics"))
+                    
+                    cipher.createSTP("tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile), cipherParameters)
+                    outputOfProcess = subprocess.check_output([self.pathToSTP, "--cryptominisat", 
+                                                               "tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile)])
+                    if("Invalid" in outputOfProcess):
+                        print weight
+                        constants[alpha][beta] = weight
+                        print constants
+                        break
+                 
+        print constants  
                           
     def findMinWeightCharacteristic(self, cipher, parameters):
         """

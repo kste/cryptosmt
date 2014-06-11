@@ -43,6 +43,9 @@ def startTool(toolParameters):
     if(toolParameters["mode"] == 2):
         search.findAllCharacteristics(cipher, toolParameters) 
     
+    if(toolParameters["mode"] == 3):
+        search.findBestConstants(cipher, toolParameters)
+    
     if(toolParameters["mode"] == 4):
         searchDifferential.computeProbabilityOfDifferentials(cipher, toolParameters)
 
