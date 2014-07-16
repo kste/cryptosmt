@@ -109,9 +109,9 @@ class SimonCipher(AbstractCipher):
                   
         #Deal with dependent inputs
         dependentRotated = StpCommands().getStringLeftRotate(self.getDependentBitsForAND(x_in, wordsize),7,wordsize)
-        andoutRotatedMasked = StpCommands().getStringRightRotate("({0} & {1})".format(x_in,dependentRotated), 7, wordsize)
+        andoutRotatedMasked = StpCommands().getStringRightRotate("({0} & {1})".format(and_out,dependentRotated), 7, wordsize)
         
-        command += "ASSERT(BVXOR({0} & {1}, {2}) = 0hex{3});\n".format(x_in, self.getDependentBitsForAND(x_in, wordsize), andoutRotatedMasked, "0"*(wordsize / 4))          
+        command += "ASSERT(BVXOR({0} & {1}, {2}) = 0hex{3});\n".format(and_out, self.getDependentBitsForAND(x_in, wordsize), andoutRotatedMasked, "0"*(wordsize / 4))          
                                                             
         #Assert XORs
         command += "ASSERT(" + x_out + " = "
@@ -130,9 +130,9 @@ class SimonCipher(AbstractCipher):
         #                                                                  x_in, StpCommands().getStringRightRotate(x_in, 14, wordsize))
                                                                           
         #More improved :)
-        command += "ASSERT({0} = (IF {2} = 0x{4} THEN BVSUB({5},0x{4},0x1) ELSE BVXOR(~{1} & ~{2} & {3}, {2}) ENDIF));".format(w, StpCommands().getStringRightRotate(x_in, 7, wordsize),
+        command += "ASSERT({0} = (IF {2} = 0x{4} THEN BVSUB({5},0x{4},0x{6}1) ELSE BVXOR(~{1} & ~{2} & {3}, {2}) ENDIF));".format(w, StpCommands().getStringRightRotate(x_in, 7, wordsize),
                                                                           x_in, StpCommands().getStringRightRotate(x_in, 14, wordsize),
-                                                                          "f"*(wordsize / 4), wordsize);
+                                                                          "f"*(wordsize / 4), wordsize, "0"*((wordsize / 4)- 1));
         
                                                                   
                 

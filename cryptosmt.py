@@ -5,7 +5,7 @@ Created on Mar 28, 2014
 '''
 
 from cryptanalysis import characteristicSearch, differentialSearch
-from ciphers import simon, speck
+from ciphers import simon, speck, simonlinear
 
 from argparse import RawTextHelpFormatter
 
@@ -29,6 +29,8 @@ def startTool(toolParameters):
         cipher = simon.SimonCipher()
     elif(toolParameters["cipher"] == 'speck'):
         cipher = speck.SpeckCipher()
+    elif(toolParameters["cipher"] == 'simonlinear'):
+        cipher = simonlinear.SimonLinearCipher()
     else:
         print "Cipher not supported!"
         return

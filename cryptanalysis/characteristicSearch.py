@@ -82,6 +82,7 @@ class characteristicSearch:
                                                                           parameters["wordsize"],
                                                                           weight)
                 self.stpParser.printSTPOutputAsCharacteristic(outputOfProcess, ['x', 'y', 'w'], parameters["rounds"])
+                #print outputOfProcess
                 break
             weight += 1
         return weight
