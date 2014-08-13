@@ -48,7 +48,7 @@ class characteristicSearch:
                     cipherParameters.append(parameters.get("blockedCharacteristics"))
                     
                     cipher.createSTP("tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile), cipherParameters)
-                    outputOfProcess = subprocess.check_output([self.pathToSTP, "--cryptominisat", 
+                    outputOfProcess = subprocess.check_output([self.pathToSTP, "--cryptominisat4", 
                                                                "tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile)])
                     if("Invalid" in outputOfProcess):
                         print weight
@@ -74,7 +74,7 @@ class characteristicSearch:
             cipherParameters.append(parameters.get("blockedCharacteristics"))
             
             cipher.createSTP("tmp/{}.stp".format(cipher.getName()), cipherParameters)
-            outputOfProcess = subprocess.check_output([self.pathToSTP, "--cryptominisat", "tmp/{}.stp".format(cipher.getName())])
+            outputOfProcess = subprocess.check_output([self.pathToSTP, "tmp/{}.stp".format(cipher.getName())])
             
             if("Invalid" in outputOfProcess):
                 print "Characteristic for {} - Rounds {} - Wordsize {}- Weight {}".format(cipher.getName(), 
@@ -105,7 +105,7 @@ class characteristicSearch:
             
             # Start STP
             cipher.createSTP("tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile), cipherParameters)
-            outputOfProcess = subprocess.check_output([self.pathToSTP, "--cryptominisat", 
+            outputOfProcess = subprocess.check_output([self.pathToSTP, "--cryptominisat4", 
                                          "tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile)])
             
             # Check for solution

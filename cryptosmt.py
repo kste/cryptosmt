@@ -14,7 +14,7 @@ import yaml
 
 # Paths to the STP and cryptominisat executable
 pathToSTP = "../stp/stp"
-pathToCryptoMinisat = "../cryptominisat/build/cryptominisat"
+pathToCryptoMinisat = "../cryptominisat/cryptominisat"
 
 
 def startTool(toolParameters):
