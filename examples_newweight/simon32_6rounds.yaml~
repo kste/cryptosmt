@@ -1,0 +1,14 @@
+# Example input file to search a differential
+# for Simon32 and 6 rounds
+---
+cipher: simon
+sweight: 12
+rounds: 6
+wordsize: 16
+mode: 4
+fixedVariables:
+- x0: "0x2200"
+- y0: "0xC000"
+- x6: "0x2200"
+- y6: "0x0800"
+...
