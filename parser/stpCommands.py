@@ -98,9 +98,9 @@ class StpCommands(object):
         """
         Adds the weight computation and assertion to the stp file.
         """
-        file.write("weight: BITVECTOR(11);\n")
+        file.write("weight: BITVECTOR(16);\n")
         file.write(self.getWeightString(p, wordsize, ignoreMSBs) + "\n")
-        file.write("ASSERT(weight = {0:#013b});\n".format(weight))
+        file.write("ASSERT(weight = {0:#018b});\n".format(weight))
         return
     
     def getWeightString(self, variables, wordsize, ignoreMSBs = 0):
@@ -108,9 +108,9 @@ class StpCommands(object):
         Asserts that the weight is equal to the hamming weight of the
         given variables.
         """
-        command = "ASSERT((weight = BVPLUS(11,"
+        command = "ASSERT((weight = BVPLUS(16,"
         for var in variables:
-            tmp = "0b000@(BVPLUS(8, "
+            tmp = "0b00000000@(BVPLUS(8, "
             for bit in range(wordsize - ignoreMSBs):
                 """
                 Ignore MSBs if they do not contribute to 

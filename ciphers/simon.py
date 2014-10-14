@@ -119,16 +119,7 @@ class SimonCipher(AbstractCipher):
         command += StpCommands().getStringLeftRotate(x_in, rotGamma, wordsize)
         command += ", BVXOR(" + y_in + ", " + and_out + ")"
         command += "));\n"
-        
-        #For weight computation
-        #command += "ASSERT({0} = ({1} | {2} | {3}));".format(w, StpCommands().getStringLeftRotate(x_in, rotAlpha, wordsize),
-        #                                                    StpCommands().getStringLeftRotate(x_in, rotBeta, wordsize),
-        #                                                    and_out)
-        
-        #Improved weight computation
-        #command += "ASSERT({0} = BVXOR(~{1} & ~{2} & {3}, {2}));".format(w, StpCommands().getStringRightRotate(x_in, 7, wordsize),
-        #                                                                  x_in, StpCommands().getStringRightRotate(x_in, 14, wordsize))
-                                                                          
+                                                            
         #More improved :)
         command += "ASSERT({0} = (IF {2} = 0x{4} THEN BVSUB({5},0x{4},0x{6}1) ELSE BVXOR(~{1} & ~{2} & {3}, {2}) ENDIF));".format(w, StpCommands().getStringRightRotate(x_in, 7, wordsize),
                                                                           x_in, StpCommands().getStringRightRotate(x_in, 14, wordsize),
