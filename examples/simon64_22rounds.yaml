@@ -1,5 +1,5 @@
-# Example input file to search a differential
-# for Simon64 and 22 rounds
+# Example input file to search for a differential
+# characteristic for Simon64 and 21 rounds
 ---
 cipher: simon
 sweight: 72
@@ -7,8 +7,8 @@ rounds: 22
 wordsize: 32
 mode: 4
 fixedVariables:
-- x0: "0x00088000"
-- y0: "0x00200000"
-- x22: "0x00088000"
-- y22: "0x00020000"
+- x0: "0x02200000"
+- y0: "0x08000000"
+- x22: "0x02200000"
+- y22: "0x00800000"
 ...
