@@ -31,8 +31,8 @@ class parseSTPoutput(object):
                 varName = tmp.group(1)
                 varValue = tmp.group(2)
                 characteristic[varName] = varValue
-                
-        return differentialCharacteristic.differentialCharacteristic(characteristic, characteristicFormat, rounds)
+        
+        return differentialCharacteristic.differentialCharacteristic(characteristic, characteristicFormat, rounds, weight)
     
     def printSTPOutputAsCharacteristic(self, output, characteristicFormat, rounds):
         """

@@ -14,6 +14,9 @@ class SimonLinearCipher(AbstractCipher):
     def getName(self):
         return "simonlinear"
     
+    def getFormatString(self):
+        return ['x', 'y', 'w']
+    
     def createSTP(self, filename, cipherParameters):
         """
         Creates an STP file to find a linear characteristic for Simon with the given parameters.

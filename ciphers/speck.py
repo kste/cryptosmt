@@ -14,6 +14,9 @@ class SpeckCipher(AbstractCipher):
     def getName(self):
         return "speck"
     
+    def getFormatString(self):
+        return ['x', 'y', 'w']
+    
     def createSTP(self, filename, cipherParameters):
         wordsize = cipherParameters[0]
         rotAlpha = cipherParameters[1]

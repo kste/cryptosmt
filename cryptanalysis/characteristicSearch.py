@@ -81,7 +81,7 @@ class characteristicSearch:
                                                                           parameters["rounds"], 
                                                                           parameters["wordsize"],
                                                                           weight)
-                self.stpParser.printSTPOutputAsCharacteristic(outputOfProcess, ['x', 'y', 'w'], parameters["rounds"])
+                self.stpParser.printSTPOutputAsCharacteristic(outputOfProcess, cipher.getFormatString(), parameters["rounds"])
                 #print outputOfProcess
                 break
             weight += 1
@@ -115,10 +115,10 @@ class characteristicSearch:
                                                                                           parameters["wordsize"],
                                                                                           weight)
                 self.stpParser.printSTPOutputAsCharacteristic(outputOfProcess, 
-                                                              ['x', 'y', 'w'], 
+                                                              cipher.getFormatString(), 
                                                               parameters["rounds"])
                 foundCharacteristics.append(self.stpParser.getCharacteristicFromSTPOutput(outputOfProcess, 
-                                                                                          ['x', 'y', 'w'], 
+                                                                                          cipher.getFormatString(), 
                                                                                           parameters["rounds"]))
             else:
                 print "Found {} characteristics\n".format(totalNumberOfCharacteristics)

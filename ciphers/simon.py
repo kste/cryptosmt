@@ -13,6 +13,9 @@ class SimonCipher(AbstractCipher):
  
     def getName(self):
         return "simon"
+
+    def getFormatString(self):
+        return ['x', 'y', 'w']
     
     def createSTP(self, filename, cipherParameters):
         """

@@ -25,9 +25,10 @@ class StpCommands(object):
         """
         #print characteristic.characteristicData
         # Only add state words (x, y)
-        
+
         filteredWords = {k:v for k,v in characteristic.characteristicData.iteritems() 
-                            if k.startswith('x') or k.startswith('y')}
+                            if k.startswith('x') or k.startswith('y') or k.startswith('v')}
+
         #print filteredWords
         
         blockingStatement = "ASSERT(NOT("
@@ -101,6 +102,7 @@ class StpCommands(object):
         file.write("weight: BITVECTOR(16);\n")
         file.write(self.getWeightString(p, wordsize, ignoreMSBs) + "\n")
         file.write("ASSERT(weight = {0:#018b});\n".format(weight))
+        #file.write("ASSERT(BVLE(weight, {0:#018b}));\n".format(weight))
         return
     
     def getWeightString(self, variables, wordsize, ignoreMSBs = 0):
@@ -220,10 +222,14 @@ class StpCommands(object):
         return command
     
     def getStringLeftRotate(self, value, rotation, wordsize):
-        command = "((({0} << {1})[{2}:0]) | (({0} >> {3})[{2}:0]))".format(value, rotation, wordsize - 1, wordsize - rotation)
+        if(rotation % wordsize == 0):
+            return "{0}".format(value)
+        command = "((({0} << {1})[{2}:0]) | (({0} >> {3})[{2}:0]))".format(value, (rotation % wordsize), wordsize - 1, (wordsize - rotation) % wordsize)
         
         return command
     
     def getStringRightRotate(self, value, rotation, wordsize):
-        command = "((({0} >> {1})[{2}:0]) | (({0} << {3})[{2}:0]))".format(value, rotation, wordsize - 1, wordsize - rotation)
+        if(rotation % wordsize == 0):
+            return "{0}".format(value)
+        command = "((({0} >> {1})[{2}:0]) | (({0} << {3})[{2}:0]))".format(value, (rotation % wordsize), wordsize - 1, (wordsize - rotation) % wordsize)
         return command

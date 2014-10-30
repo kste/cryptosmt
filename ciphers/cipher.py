@@ -14,3 +14,7 @@ class AbstractCipher(object):
     @abstractmethod
     def createSTP(self, filename, cipherParameters):
         pass
+
+    @abstractmethod
+    def getFormatString(self):
+        pass

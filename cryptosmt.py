@@ -5,7 +5,7 @@ Created on Mar 28, 2014
 '''
 
 from cryptanalysis import characteristicSearch, differentialSearch
-from ciphers import simon, speck, simonlinear
+from ciphers import simon, speck, simonlinear, keccak, siphash, simonrk, chaskeymac, chaskeymachalf
 
 from argparse import RawTextHelpFormatter
 
@@ -31,6 +31,16 @@ def startTool(toolParameters):
         cipher = speck.SpeckCipher()
     elif(toolParameters["cipher"] == 'simonlinear'):
         cipher = simonlinear.SimonLinearCipher()
+    elif(toolParameters["cipher"] == 'keccak'):
+        cipher = keccak.KeccakCipher()
+    elif(toolParameters["cipher"] == 'siphash'):
+        cipher = siphash.SipHashCipher(toolParameters["msgblocks"]) 
+    elif(toolParameters["cipher"] == 'simonrk'):
+        cipher = simonrk.SimonRkCipher()
+    elif(toolParameters["cipher"] == 'chaskey'):
+        cipher = chaskeymac.ChasKeyMac(toolParameters["msgblocks"])
+    elif(toolParameters["cipher"] == 'chaskeyhalf'):
+        cipher = chaskeymachalf.ChasKeyMacHalf(toolParameters["msgblocks"])         
     else:
         print "Cipher not supported!"
         return
@@ -69,6 +79,9 @@ def checkParameters(params):
     
     if not ("rounds" in params):
         params["rounds"] = 5
+
+    if not ("msgblocks" in params):
+        params["msgblocks"] = 1
         
     if not ("mode" in params):
         params["mode"] = 0
@@ -89,6 +102,7 @@ def main():
     parser.add_argument('--sweight', nargs=1, help="Hamming weight of the characteristic to search")
     parser.add_argument('--rounds', nargs=1, help="The number of rounds to use of the cipher")
     parser.add_argument('--wordsize', nargs=1, help="Wordsize used in the cipher.")
+    parser.add_argument('--msgblocks', nargs=1, help="Number of message blocks.")
     parser.add_argument('--mode', nargs=1, help="0 = search characteristic for fixed round\n" + 
                                                 "1 = search characteristic for all rounds starting at the round specified\n" +
                                                 "2 = search all characteristic for a specific weight\n" +
@@ -111,6 +125,8 @@ def main():
                 params["cipher"] = doc["cipher"]
             if("wordsize" in doc):
                 params["wordsize"] = doc["wordsize"]
+            if("msgblocks" in doc):
+                params["msgblocks"] = doc["msgblocks"]
             if("mode" in doc):
                 params["mode"] = doc["mode"]
             if("iterative" in doc):
@@ -137,6 +153,9 @@ def main():
     
     if(args.sweight):
         params["sweight"] = int(args.sweight[0])
+
+    if(args.msgblocks):
+        params["msgblocks"] = int(args.msgblocks[0])
         
     if(args.mode):
         params["mode"] = int(args.mode[0])

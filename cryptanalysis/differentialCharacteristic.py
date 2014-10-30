@@ -14,11 +14,14 @@ class differentialCharacteristic:
     characteristicData = None
     printFormat = None
     numberOfRounds = 0
+    weight = 0
+    msgBlocks = 1
      
-    def __init__(self, data, format, rounds):
+    def __init__(self, data, format, rounds, weight):
         self.characteristicData = data
         self.printFormat = format 
         self.numberOfRounds = rounds
+        self.weight = weight
         return
       
     def printText(self):
@@ -28,9 +31,8 @@ class differentialCharacteristic:
         '''
         header = []
         data = []
-        
         # Get data
-        for round in range(-1, self.numberOfRounds + 1):
+        for round in range(-1, (self.numberOfRounds + 1) * self.msgBlocks): #BAD HACK FOR MESSAGE BLOCKS
             tmpRow = []
             for word in self.printFormat:
                 if(round == -1):
@@ -68,7 +70,7 @@ class differentialCharacteristic:
         print headerString
         print "-"*len(headerString)
         print dataString
-        
+        print "Weight: " + str(int(self.weight, 16))
         return
     
     def printLatex(self):
