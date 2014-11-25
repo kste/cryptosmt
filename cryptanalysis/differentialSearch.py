@@ -40,7 +40,8 @@ class differentialSearch:
         diffProbability = 0
         totalNumberOfCharacteristics = 0
         
-        while(True):                            
+        while(True):
+            solutions = 0                         
             cipherParameters = cipher.constructParametersList(parameters["rounds"], parameters["wordsize"], weight)
             cipherParameters.append(parameters["iterative"])
             cipherParameters.append(parameters.get("fixedVariables"))
@@ -48,18 +49,24 @@ class differentialSearch:
             
             # Start STP
             cipher.createSTP("tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile), cipherParameters)
-            p = subprocess.check_output([self.pathToSTP, "--exit-after-CNF", "--output-CNF", 
-                                         "tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile)])
-            
-            # Find the number of solutions with the SAT solver
+            p = subprocess.Popen([self.pathToSTP, "--exit-after-CNF", "--output-CNF", 
+                                         "tmp/{}{}.stp".format(cipher.getName(), randomStringForTMPFile)], stdout=subprocess.PIPE)
+
+            out, err = p.communicate()
+            p.wait()
+
             print "Checking for number of solutions of weight " + str(weight)
-            satParameters = [self.pathToSATSolver, "--maxsol", "10000000", "--verb", "0", "-s", "0", "output_0.cnf"]
-            try:
-                p = subprocess.check_output(satParameters)
-            except subprocess.CalledProcessError, e:
-                # This always happens as UNSAT will be returned when
-                # no more solutions exist!
-                solutions = (e.output.count("SATISFIABLE") - 1) / 2 #STP seems to produce wrong CNF which leads to double the solutions
+            # Check if STP found a solution without using SAT solver
+            if(out.count("Invalid.") > 0):
+                solutions = 1
+            # Use SAT solver to count solutions
+            else:
+                satParameters = [self.pathToSATSolver, "--maxsol", "10000000", "--verb", "0", "-s", "0", "output_0.cnf"]
+                p = subprocess.Popen(satParameters, stdout=subprocess.PIPE)
+                out, err = p.communicate()
+                p.wait()
+                solutions = (out.count("SATISFIABLE") - 1) / 2 #STP seems to produce wrong CNF which leads to double the solutions
+                
                 
             # Print result
             diffProbability += math.pow(2, -weight) * solutions

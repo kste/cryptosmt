@@ -13,8 +13,8 @@ import argparse
 import yaml
 
 # Paths to the STP and cryptominisat executable
-pathToSTP = "../stp/stp"
-pathToCryptoMinisat = "../cryptominisat/cryptominisat"
+pathToSTP = "../../../Git-repos/stp/stp"
+pathToCryptoMinisat = "../../../Git-repos/cryptominisat/cryptominisat"
 
 
 def startTool(toolParameters):
