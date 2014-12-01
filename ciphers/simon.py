@@ -94,7 +94,7 @@ class SimonCipher(AbstractCipher):
         Returns a string representing one round of Simon in STP.
         
         y[i+1] = x[i]
-        x[i] = (x[i] <<< 1) & (x[i] <<< 8) ^ y[i] ^ (x[i] << 2) 
+        x[i+1] = (x[i] <<< 1) & (x[i] <<< 8) ^ y[i] ^ (x[i] << 2) 
         """
         command = ""
         
