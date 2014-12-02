@@ -22,7 +22,8 @@ class parseSTPoutput(object):
         #print output
         
         characteristic = {}
-        
+        weight = "0"
+
         for row in output.split('\n'):
             if(re.match('ASSERT.*weight', row)):
                 weight = re.search('(?<=ASSERT\( weight = ).*(?= \);)',row).group(0)

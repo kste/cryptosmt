@@ -95,6 +95,15 @@ class StpCommands(object):
         command += ") = 0hex{}));".format("0"*(wordsize / 4))
         return command
     
+    def limitWeight(self, file, weight, p, wordsize, ignoreMSBs = 0):
+        """
+        Adds the weight computation and assertion to the stp file.
+        """
+        file.write("limitWeight: BITVECTOR(16);\n")
+        file.write(self.getWeightString(p, wordsize, ignoreMSBs, "limitWeight") + "\n")
+        file.write("ASSERT(BVLE(limitWeight, {0:#018b}));\n".format(weight))
+        return
+
     def setupWeightComputation(self, file, weight, p, wordsize, ignoreMSBs = 0):
         """
         Adds the weight computation and assertion to the stp file.
@@ -105,12 +114,12 @@ class StpCommands(object):
         #file.write("ASSERT(BVLE(weight, {0:#018b}));\n".format(weight))
         return
     
-    def getWeightString(self, variables, wordsize, ignoreMSBs = 0):
+    def getWeightString(self, variables, wordsize, ignoreMSBs = 0, weightVariable = "weight"):
         """
         Asserts that the weight is equal to the hamming weight of the
         given variables.
         """
-        command = "ASSERT((weight = BVPLUS(16,"
+        command = "ASSERT(({} = BVPLUS(16,".format(weightVariable)
         for var in variables:
             tmp = "0b00000000@(BVPLUS(8, "
             for bit in range(wordsize - ignoreMSBs):

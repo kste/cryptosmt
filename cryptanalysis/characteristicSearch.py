@@ -5,7 +5,7 @@ Created on Apr 3, 2014
 '''
 
 from ciphers import simon, speck
-from parser import parseSTPoutput
+from parser import parseSTPoutput, parseBoolectorOutput
 
 import subprocess
 import random
@@ -15,15 +15,18 @@ class characteristicSearch:
     classdocs
     '''
 
+    boolectorParser = None
     stpParser = None
     pathToSTP = ""
 
-    def __init__(self, stp):
+    def __init__(self, stp, boolector):
         '''
         Constructor
         '''
         self.pathToSTP = stp
+        self.pathToBoolector = boolector
         self.stpParser = parseSTPoutput.parseSTPoutput()
+        self.boolectorParser = parseBoolectorOutput.parseBoolectorOutput()
         
     def findBestConstants(self, cipher, parameters):
         constants = [[0 for x in xrange(parameters["wordsize"])] for x in xrange(parameters["wordsize"])] 
@@ -74,14 +77,28 @@ class characteristicSearch:
             cipherParameters.append(parameters.get("blockedCharacteristics"))
             
             cipher.createSTP("tmp/{}.stp".format(cipher.getName()), cipherParameters)
-            outputOfProcess = subprocess.check_output([self.pathToSTP, "tmp/{}.stp".format(cipher.getName())])
+
+            result = "" #add solver functions here later
+
+            if(parameters["boolector"]):
+                #Use STP to create SMTLIB-2
+                inputFile = subprocess.check_output([self.pathToSTP, "--print-back-SMTLIB2", "tmp/{}.stp".format(cipher.getName())])
+
+                #Start Boolector
+                processOpen = subprocess.Popen( [self.pathToBoolector, "-x", "-m"], stdout = subprocess.PIPE, stdin = subprocess.PIPE )
+                result = processOpen.communicate(input = inputFile)[0]
+            else:
+                result = subprocess.check_output([self.pathToSTP, "tmp/{}.stp".format(cipher.getName())])
             
-            if("Invalid" in outputOfProcess):
+            if("Invalid" in result or "unsat" not in result):
                 print "Characteristic for {} - Rounds {} - Wordsize {}- Weight {}".format(cipher.getName(), 
                                                                           parameters["rounds"], 
                                                                           parameters["wordsize"],
                                                                           weight)
-                self.stpParser.printSTPOutputAsCharacteristic(outputOfProcess, cipher.getFormatString(), parameters["rounds"])
+                if(parameters["boolector"]):
+                    self.boolectorParser.printBoolectorOutputAsCharacteristic(result, cipher.getFormatString(), parameters["rounds"])
+                else:
+                    self.stpParser.printSTPOutputAsCharacteristic(result, cipher.getFormatString(), parameters["rounds"])
                 #print outputOfProcess
                 break
             weight += 1

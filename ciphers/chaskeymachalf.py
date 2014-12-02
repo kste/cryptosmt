@@ -59,6 +59,9 @@ class ChasKeyMacHalf(AbstractCipher):
             StpCommands().setupVariables(file, w1, wordsize)
             
             StpCommands().setupWeightComputation(file, weight, w0 + w1, wordsize, 1)
+
+            #Minimize Weight in middle rounds
+            #StpCommands().limitWeight(file, 10, w0[2:4] + w1[2:4], wordsize, 1)
             
             for i in range(rounds):
                 self.setupChasKeyRound(file, i, v0[i], v1[i], v2[i], v3[i],

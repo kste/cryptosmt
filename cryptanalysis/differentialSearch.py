@@ -54,12 +54,24 @@ class differentialSearch:
             # Find the number of solutions with the SAT solver
             print "Checking for number of solutions of weight " + str(weight)
             satParameters = [self.pathToSATSolver, "--maxsol", "10000000", "--verb", "0", "-s", "0", "output_0.cnf"]
-            try:
-                p = subprocess.check_output(satParameters)
-            except subprocess.CalledProcessError, e:
-                # This always happens as UNSAT will be returned when
-                # no more solutions exist!
-                solutions = (e.output.count("SATISFIABLE") - 1) / 2 #STP seems to produce wrong CNF which leads to double the solutions
+
+            logFile = open("tmp/satlog.tmp", "w")
+            satProcess = subprocess.Popen(satParameters, stdout=logFile)
+            retCode = satProcess.wait()
+
+            with open("tmp/satlog.tmp", "r") as f:
+                solutions = 0
+                for line in f:
+                    if("s SATISFIABLE" in line):
+                        solutions += 1
+                solutions /= 2 #STP seems to produce wrong CNF which leads to double the solutions
+
+            # try:
+            #     p = subprocess.check_output(satParameters)
+            # except subprocess.CalledProcessError, e:
+            #     # This always happens as UNSAT will be returned when
+            #     # no more solutions exist!
+            #     solutions = (e.output.count("SATISFIABLE") - 1) / 2 #STP seems to produce wrong CNF which leads to double the solutions
                 
             # Print result
             diffProbability += math.pow(2, -weight) * solutions

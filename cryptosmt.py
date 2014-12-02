@@ -15,13 +15,14 @@ import yaml
 # Paths to the STP and cryptominisat executable
 pathToSTP = "../stp/stp"
 pathToCryptoMinisat = "../cryptominisat/cryptominisat"
+pathToBoolector = "../boolector/boolector/boolector"
 
 
 def startTool(toolParameters):
     """
     Starts the search tool for the given parameters
     """
-    search = characteristicSearch.characteristicSearch(pathToSTP)
+    search = characteristicSearch.characteristicSearch(pathToSTP, pathToBoolector)
     searchDifferential = differentialSearch.differentialSearch(pathToSTP, pathToCryptoMinisat)
        
     # Cipher
@@ -88,7 +89,10 @@ def checkParameters(params):
         
     if not ("wordsize" in params):
         params["wordsize"] = 16
-    
+
+    if not ("boolector" in params):
+        params["boolector"] = False
+
     return
 
 def main():
@@ -108,6 +112,7 @@ def main():
                                                 "2 = search all characteristic for a specific weight\n" +
                                                 "4 = determine the probability of the differential\n")
     parser.add_argument('--iterative', action="store_true", help="Only search for iterative characteristics")
+    parser.add_argument('--boolector', action="store_true", help="Use boolector to find solutions")
     parser.add_argument('--inputfile', nargs=1, help="Use an yaml input file to read the parameters.")
     
     args = parser.parse_args()
@@ -162,6 +167,9 @@ def main():
         
     if(args.iterative):
         params["iterative"] = args.iterative
+
+    if(args.boolector):
+        params["boolector"] = args.boolector
         
     #check parameter sanity and set default values
     checkParameters(params)
