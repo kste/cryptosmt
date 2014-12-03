@@ -1,0 +1,37 @@
+# Example input file to search a differential
+# for Simon32 and 13 rounds
+---
+cipher: simonkeyrc
+rounds: 44
+wordsize: 32
+mode: 0
+fixedVariables:
+- x00: "0x00000000"
+- y00: "0x00000000"
+- x10: "0xFFFFFFFF"
+- y10: "0xFFFFFFFF"
+- x044: "0x7ad8ba94"
+- y144: "0xcb9d5338"
+- x144: "0x72de095d"
+- y144: "0x6ee11452"
+#- key0: "0x2367"
+- key1: "0x8f3ef4b5"
+- key2: "0x67023305"
+#- key3: "0x53f3"
+- key4: "0x4e889046"
+#- key5: "0xfad8"
+#- key6: "0xbed7"
+...
+
+
+
+
+
+
+
+
+
+
+
+
+

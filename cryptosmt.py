@@ -5,7 +5,7 @@ Created on Mar 28, 2014
 '''
 
 from cryptanalysis import characteristicSearch, differentialSearch
-from ciphers import simon, speck, simonlinear, keccak, siphash, simonrk, chaskeymac, chaskeymachalf
+from ciphers import simon, speck, simonlinear, keccak, siphash, simonrk, chaskeymac, chaskeymachalf, simonkeyrc
 
 from argparse import RawTextHelpFormatter
 
@@ -38,6 +38,8 @@ def startTool(toolParameters):
         cipher = siphash.SipHashCipher(toolParameters["msgblocks"]) 
     elif(toolParameters["cipher"] == 'simonrk'):
         cipher = simonrk.SimonRkCipher()
+    elif(toolParameters["cipher"] == 'simonkeyrc'):
+        cipher = simonkeyrc.SimonKeyRcCipher()        
     elif(toolParameters["cipher"] == 'chaskey'):
         cipher = chaskeymac.ChasKeyMac(toolParameters["msgblocks"])
     elif(toolParameters["cipher"] == 'chaskeyhalf'):
