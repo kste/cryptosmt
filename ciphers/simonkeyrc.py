@@ -15,7 +15,7 @@ class SimonKeyRcCipher(AbstractCipher):
         return "simonkeyrc"
 
     def getFormatString(self):
-        return ['x0', 'y0', 'x1', 'y1', 'deltax', 'deltay', 'key']
+        return ['x0r', 'y0r', 'x1r', 'y1r', 'x2r', 'y2r', 'x3r', 'y3r', 'deltax', 'deltay', 'key']
     
     def createSTP(self, filename, cipherParameters):
         """
@@ -31,47 +31,49 @@ class SimonKeyRcCipher(AbstractCipher):
         varsFixed = cipherParameters[7]
         blockedCharacteristics = cipherParameters[8]
         
+        numMessage = 2
+
         with open(filename, 'w') as file:
             file.write("% Input File for STP\n% Simon w={} alpha={} beta={} gamma={} rounds={}\n\n\n".format(wordsize, rotAlpha, rotBeta, rotGamma, rounds))
-               
-            # Setup variable
-            # x = left, y = right
-            x0 = ["x0{}".format(i) for i in range(rounds + 1)]
-            x1 = ["x1{}".format(i) for i in range(rounds + 1)]
-            y0 = ["y0{}".format(i) for i in range(rounds + 1)]
-            y1 = ["y1{}".format(i) for i in range(rounds + 1)]
+            
+
+            # Setup key
             key = ["key{}".format(i) for i in range(rounds + 1)]
             tmpkey = ["tmpkey{}".format(i) for i in range(rounds + 1)]
-            and_out0 = ["andout0{}".format(i) for i in range(rounds + 1)]
-            and_out1 = ["andout1{}".format(i) for i in range(rounds + 1)]
-            delta_x = ["deltax{}".format(i) for i in range(rounds + 1)]
-            delta_y = ["deltay{}".format(i) for i in range(rounds + 1)]
-            
-            # w = weight
-            
-            StpCommands().setupVariables(file, x0, wordsize)
-            StpCommands().setupVariables(file, x1, wordsize)
-            StpCommands().setupVariables(file, y0, wordsize)
-            StpCommands().setupVariables(file, y1, wordsize)
+
             StpCommands().setupVariables(file, key, wordsize)
             StpCommands().setupVariables(file, tmpkey, wordsize)
-            StpCommands().setupVariables(file, and_out0, wordsize)
-            StpCommands().setupVariables(file, and_out1, wordsize)
-            StpCommands().setupVariables(file, delta_x, wordsize)
-            StpCommands().setupVariables(file, delta_y, wordsize)
                
             #TODO Key schedule
             self.setupKeySchedule(file, key, tmpkey, rounds, wordsize)
 
-            for i in range(rounds):
-                self.setupSimonRound(file, x0[i], x1[i], y0[i], y1[i], 
-                                     x0[i+1], x1[i+1], y0[i+1], y1[i+1],
-                                     and_out0[i], and_out1[i], key[i], 
-                                     delta_x[i], delta_y[i], wordsize)
+            # Setup variables
+            # x = left, y = right
+            for msg in range(numMessage):
+                x = ["x{}r{}".format(msg, i) for i in range(rounds + 1)]
+                y = ["y{}r{}".format(msg, i) for i in range(rounds + 1)]
+                and_out = ["andout{}r{}".format(msg, i) for i in range(rounds + 1)]
+                StpCommands().setupVariables(file, x, wordsize)
+                StpCommands().setupVariables(file, y, wordsize)
+                StpCommands().setupVariables(file, and_out, wordsize)
 
+                #Setup Rounds
+                for i in range(rounds):
+                    self.setupSimonRound(file, x[i], y[i], x[i+1], y[i+1], and_out[i], key[i], wordsize)
+            
+            
+            #Differences between x0 and x1
+            if(numMessage > 1):
+                delta_x = ["deltax{}".format(i) for i in range(rounds + 1)]
+                delta_y = ["deltay{}".format(i) for i in range(rounds + 1)]
+                StpCommands().setupVariables(file, delta_x, wordsize)
+                StpCommands().setupVariables(file, delta_y, wordsize)
+                for i in range(rounds + 1):
+                    file.write("ASSERT({} = BVXOR({}, {}));\n".format(delta_x[i], "x0r{}".format(i), "x1r{}".format(i)))
+                    file.write("ASSERT({} = BVXOR({}, {}));\n".format(delta_y[i], "y0r{}".format(i), "y1r{}".format(i)))
+
+            
             #Last round fix
-            file.write("ASSERT({} = BVXOR({}, {}));\n".format(delta_x[rounds], x0[rounds], x1[rounds]))
-            file.write("ASSERT({} = BVXOR({}, {}));\n".format(delta_y[rounds], y0[rounds], y1[rounds]))
                        
             if(varsFixed):
                 for key, value in varsFixed.iteritems():
@@ -103,17 +105,11 @@ class SimonKeyRcCipher(AbstractCipher):
         file.write(command)
         return
         
-    def setupSimonRound(self, file, x0_in, x1_in, y0_in, y1_in, 
-                        x0_out, x1_out, y0_out, y1_out, and_out0, and_out1, 
-                        key, deltax, deltay, wordsize):
-        file.write(self.getStringForSimonRound(x0_in, x1_in, y0_in, y1_in, 
-                        x0_out, x1_out, y0_out, y1_out, and_out0, and_out1, 
-                        key, deltax, deltay, wordsize) + '\n')
+    def setupSimonRound(self, file, x0_in, y0_in,  x0_out, y0_out, and_out0, key, wordsize):
+        file.write(self.getStringForSimonRound(x0_in, y0_in,  x0_out, y0_out, and_out0, key, wordsize) + '\n')
         return
     
-    def getStringForSimonRound(self, x0_in, x1_in, y0_in, y1_in, 
-                        x0_out, x1_out, y0_out, y1_out, and_out0, and_out1, 
-                        key, deltax, deltay, wordsize):
+    def getStringForSimonRound(self, x0_in, y0_in,  x0_out, y0_out, and_out0, key, wordsize):
         """
         Returns a string representing one round of Simon in STP.
         
@@ -122,27 +118,16 @@ class SimonKeyRcCipher(AbstractCipher):
         """
         command = ""
         
-        #Assert difference
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(deltax, x0_in, x1_in)
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(deltay, y0_in, y1_in)
-
         #Assert(y_out = x_in)
         command += "ASSERT({} = {});\n".format(y0_out, x0_in)
-        command += "ASSERT({} = {});\n".format(y1_out, x1_in)
         
         #Assert AND Output
         command += "ASSERT({} = {} & {});\n".format(and_out0, 
                                                   StpCommands().getStringLeftRotate(x0_in, 1, wordsize),
                                                   StpCommands().getStringLeftRotate(x0_in, 8, wordsize))
-        command += "ASSERT({} = {} & {});\n".format(and_out1, 
-                                                  StpCommands().getStringLeftRotate(x1_in, 1, wordsize),
-                                                  StpCommands().getStringLeftRotate(x1_in, 8, wordsize))
-
         #Assert x_out
         command += "ASSERT({} = BVXOR({}, BVXOR({}, BVXOR({}, {}))));\n".format(x0_out, y0_in, and_out0, key, 
                                                     StpCommands().getStringLeftRotate(x0_in, 2, wordsize))
-        command += "ASSERT({} = BVXOR({}, BVXOR({}, BVXOR({}, {}))));\n".format(x1_out, y1_in, and_out1, key, 
-                                                    StpCommands().getStringLeftRotate(x1_in, 2, wordsize))                                                          
                 
         return command
 

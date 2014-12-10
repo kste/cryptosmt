@@ -2,17 +2,21 @@
 # for Simon32 and 13 rounds
 ---
 cipher: simonkeyrc
-rounds: 7
+rounds: 6
 wordsize: 16
 mode: 0
 fixedVariables:
-- deltax0: "0xFFFF"
-- deltay0: "0xFFFF"
-- x07: "0xd885"
-- y07: "0xc8cf"
-- x17: "0x525b"
-- y17: "0x2f10"
-- key0: "0x0000"
-- key1: "0x0000"
-#- key2: "0x0000"
+# - key0: "0xa326"
+# - key1: "0x53b6"
+# - key2: "0xc237"
+# - key3: "0x948f"
+# - key4: "0x2d6d"
+# - key5: "0xf81e"
+- deltax0: "0xffff"
+- deltay0: "0xffff"
+- x0r6: "0x7006"
+- y0r6: "0x93ef"
+- x1r6: "0xd266"
+- y1r6: "0x4329"
+
 ...

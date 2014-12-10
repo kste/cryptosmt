@@ -2,22 +2,34 @@
 # for Simon32 and 13 rounds
 ---
 cipher: simonkeyrc
-rounds: 6
+rounds: 14
 wordsize: 32
 mode: 0
 fixedVariables:
-#- key0: "0x4a0012ff"
-#- key1: "0xa700a5fb"
-#- key2: "0xdd006b7d"
-#- key3: "0x4f00143f"
-#- key4: "0xdc6f19c2"
-- key5: "0x1d341663"
-- x06: "0x66deae6b"
-- y06: "0xc758814e"
-- x16: "0xcc6c34dd"
-- y16: "0xa83a5d65"
-- deltax0: "0xffffffff"
-- deltay0: "0xffffffff"
+# - key0: "0xd30042bf"
+# - key1: "0xbe00a7ff"
+# - key2: "0x9b002ce9"
+# - key3: "0x80002197"
+# - key4: "0xc5ff4f6b"
+# - key5: "0xd39f7f86"
+# - key6: "0x93b5fa42"
+# - key7: "0x23b2d65a"
+# - key8: "0x661d077f"
+#- key9: "0xecadf782"
+- key10: "0x2d7ed942"
+- key11: "0x6e269bd9"
+- key12: "0xb83f4e05"
+#- key13: "0xc417a0be"
+- x00: "0x00000000"
+- y00: "0x00000000"
+- x10: "0x00004000"
+- y10: "0x00000000"
+- x014: "0x8b575233"
+- y014: "0x70f85652"
+- x114: "0xfdd7aa49"
+- y114: "0x52ddde89"
+
+
 ...
 
 

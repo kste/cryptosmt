@@ -6,27 +6,37 @@ rounds: 20
 wordsize: 16
 mode: 0
 fixedVariables:
-- deltax13: "0x4000"
-- deltay13: "0x0000"
+# - key0: "0x22fd"
+# - key1: "0xcaca"
+# - key2: "0x208c"
+# - key3: "0xdee3"
+# - key4: "0x349f"
+# - key5: "0x1025"
+# - key6: "0x1de7"
+# - key7: "0x1dae"
+# - key8: "0x7138"
+# - key9: "0xf5fa"
+# - key10: "0x0081"
+# - key11: "0x9bed"
+# - key12: "0x6b03"
+# - key13: "0xd114"
+# - key14: "0x7e56"
+# - key15: "0x12bf"
+# - key16: "0x3e1e"
+- key17: "0x4bb4"
+- key18: "0xd784"
+# - key19: "0x1bd9"
+- deltax0: "0x4000"
+- deltay0: "0x0000"
 - x00: "0x0000"
 - y00: "0x0000"
-- x10: "0x0000"
-- y10: "0x0040"
-#- x020: "0xca7c"
-#- y020: "0x92f7"
-#- x120: "0x867c"
-#- y120: "0xb6b7"
-#- key0: "0x2367"
-#- key1: "0x1a9b"
-#- key2: "0x0bd1"
-#- key3: "0x53f3"
-#- key4: "0x140f"
-#- key5: "0xfad8"
-#- key6: "0xbed7"
+- x10: "0x4000"
+- y10: "0x0000"
+- x020: "0xe056"
+- y020: "0xe37b"
+- x120: "0xe75f"
+- y120: "0x4865"
 ...
-
-
-
 
 
 

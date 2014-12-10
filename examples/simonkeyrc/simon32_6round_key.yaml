@@ -6,11 +6,11 @@ rounds: 6
 wordsize: 16
 mode: 0
 fixedVariables:
-- key0: "0xe179"
-- key1: "0xc1b8"
-#- key2: "0x0b4a"
-#- key3: "0x5102"
-#- key4: "0xd0d2"
+#- key0: "0xe179"
+#- key1: "0xc1b8"
+- key2: "0x0b4a"
+- key3: "0x5102"
+- key4: "0xd0d2"
 #- key5: "0x47bf"
 - deltax0: "0x4000"
 - deltay0: "0x0000"

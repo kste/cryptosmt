@@ -6,27 +6,25 @@ Created on Apr 3, 2014
 
 from ciphers import simon, speck
 from parser import parseSTPoutput
+from config import *
 
 import subprocess
 import random
 import math
 import time
-    
+
+
 class differentialSearch:
     '''
     classdocs
     '''
 
     stpParser = None
-    pathToSTP = ""
-    pathToSATSolver = ""
 
-    def __init__(self, stp, satsolver):
+    def __init__(self):
         '''
         Constructor
         '''
-        self.pathToSTP = stp
-        self.pathToSATSolver = satsolver
         self.stpParser = parseSTPoutput.parseSTPoutput()
 
     def computeProbabilityOfDifferentials(self, cipher, parameters):
