@@ -4,7 +4,7 @@ Created on Oct 14, 2014
 @author: stefan
 '''
 
-from parser.stpCommands import *
+from parser import stpcommands
 from cipher import AbstractCipher
 
 import random
