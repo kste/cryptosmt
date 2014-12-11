@@ -4,14 +4,13 @@ Created on Mar 28, 2014
 @author: stefan
 '''
 
-from cryptanalysis import charsearch, diffsearch
+from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, siphash, simonrk,
                      chaskeymac, chaskeymachalf, simonkeyrc)
 from config import *
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 
-#import argparse
 import yaml
 
 
@@ -19,8 +18,6 @@ def startsearch(tool_parameters):
     """
     Starts the search tool for the given parameters
     """
-    char_search = charsearch.CharacteristicSearch()
-    diff_search = diffsearch.differentialSearch()
 
     # Select Cipher Cipher
     if tool_parameters["cipher"] == 'simon':
@@ -47,15 +44,15 @@ def startsearch(tool_parameters):
 
     # Handle program flow
     if tool_parameters["mode"] == 0:
-        char_search.findMinWeightCharacteristic(cipher, tool_parameters)
+        search.findMinWeightCharacteristic(cipher, tool_parameters)
     elif tool_parameters["mode"] == 1:
-        char_search.searchCharacteristics(cipher, tool_parameters)
+        search.searchCharacteristics(cipher, tool_parameters)
     elif tool_parameters["mode"] == 2:
-        char_search.findAllCharacteristics(cipher, tool_parameters)
+        search.findAllCharacteristics(cipher, tool_parameters)
     elif tool_parameters["mode"] == 3:
-        char_search.findBestConstants(cipher, tool_parameters)
+        search.findBestConstants(cipher, tool_parameters)
     elif tool_parameters["mode"] == 4:
-        diff_search.computeProbabilityOfDifferentials(cipher, tool_parameters)
+        search.computeProbabilityOfDifferentials(cipher, tool_parameters)
 
     return
 

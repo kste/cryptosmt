@@ -74,7 +74,7 @@ class SimonCipher(AbstractCipher):
 
         return
     
-    def constructParametersList(self, rounds, wordsize, weight):
+    def getParamList(self, rounds, wordsize, weight):
         """
         TODO:
         """

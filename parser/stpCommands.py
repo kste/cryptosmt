@@ -26,7 +26,7 @@ class StpCommands(object):
         #print characteristic.characteristicData
         # Only add state words (x, y)
 
-        filteredWords = {k:v for k,v in characteristic.characteristicData.iteritems() 
+        filteredWords = {k:v for k,v in characteristic.characteristic_data.iteritems() 
                             if k.startswith('x') or k.startswith('y') or k.startswith('v')}
 
         #print filteredWords
