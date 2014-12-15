@@ -93,7 +93,7 @@ class SimonCipher(AbstractCipher):
 
     def getParamList(self, rounds, wordsize, weight):
         """
-        TODO:
+        Returns a list of the parameters for SIMON.
         """
         return [wordsize, 1, 8, 2, rounds, weight]
 
