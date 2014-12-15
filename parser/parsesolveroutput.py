@@ -33,7 +33,6 @@ def getCharSTPOutput(output, char_format, rounds):
     """
     characteristic = {}
     weight = "0"
-
     for row in output.split('\n'):
         if re.match(r'ASSERT.*weight', row):
             weight = re.search(r'(?<=ASSERT\( weight = ).*(?= \);)', row).group(0)

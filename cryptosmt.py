@@ -29,15 +29,15 @@ def startsearch(tool_parameters):
     elif tool_parameters["cipher"] == 'keccak':
         cipher = keccak.KeccakCipher()
     elif tool_parameters["cipher"] == 'siphash':
-        cipher = siphash.SipHashCipher(tool_parameters["msgblocks"])
+        cipher = siphash.SipHashCipher()
     elif tool_parameters["cipher"] == 'simonrk':
         cipher = simonrk.SimonRkCipher()
     elif tool_parameters["cipher"] == 'simonkeyrc':
         cipher = simonkeyrc.SimonKeyRcCipher()
     elif tool_parameters["cipher"] == 'chaskey':
-        cipher = chaskeymac.ChasKeyMac(tool_parameters["msgblocks"])
+        cipher = chaskeymac.ChasKeyMac()
     elif tool_parameters["cipher"] == 'chaskeyhalf':
-        cipher = chaskeymachalf.ChasKeyMacHalf(tool_parameters["msgblocks"])
+        cipher = chaskeymachalf.ChasKeyMacHalf()
     else:
         print "Cipher not supported!"
         return
@@ -74,9 +74,6 @@ def checkparameters(params):
     if not "rounds" in params:
         params["rounds"] = 5
 
-    if not "msgblocks" in params:
-        params["msgblocks"] = 1
-
     if not "mode" in params:
         params["mode"] = 0
 
@@ -85,6 +82,9 @@ def checkparameters(params):
 
     if not "boolector" in params:
         params["boolector"] = False
+
+    if not "nummessages" in params:
+        params["nummessages"] = 1
 
     return
 
@@ -112,6 +112,8 @@ def loadparameters(args):
                 params["iterative"] = doc["iterative"]
             if "sweight" in doc:
                 params["sweight"] = doc["sweight"]
+            if "nummessages" in doc:
+                params["nummessages"] = doc["nummessages"]
             if "fixedVariables" in doc:
                 fixed_vars = {}
                 for variable in doc["fixedVariables"]:
@@ -131,9 +133,6 @@ def loadparameters(args):
     if args.sweight:
         params["sweight"] = int(args.sweight[0])
 
-    if args.msgblocks:
-        params["msgblocks"] = int(args.msgblocks[0])
-
     if args.mode:
         params["mode"] = int(args.mode[0])
 
@@ -142,6 +141,9 @@ def loadparameters(args):
 
     if args.boolector:
         params["boolector"] = args.boolector
+
+    if args.nummessages:
+        params["nummessages"] = int(args.nummessages[0])
 
     return params
 
@@ -163,7 +165,7 @@ def main():
                                                   "the cipher")
     parser.add_argument('--wordsize', nargs=1, help="Wordsize used for the"
                                                     "cipher.")
-    parser.add_argument('--msgblocks', nargs=1,
+    parser.add_argument('--nummessages', nargs=1,
                         help="Number of message blocks.")
     parser.add_argument('--mode', nargs=1, help=
                         "0 = search characteristic for fixed round\n"

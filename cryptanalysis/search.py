@@ -25,16 +25,17 @@ def computeProbabilityOfDifferentials(cipher, parameters):
     characteristics_found = 0
 
     while weight < MAX_WEIGHT:
-        cipher_parameters = cipher.getParamList(parameters["rounds"],
-                                                parameters["wordsize"],
-                                                weight)
-        cipher_parameters.append(parameters["iterative"])
-        cipher_parameters.append(parameters.get("fixedVariables"))
-        cipher_parameters.append(parameters.get("blockedCharacteristics"))
+        cipher_params = cipher.getParamList(parameters["rounds"],
+                                            parameters["wordsize"],
+                                            weight)
+        cipher_params.append(parameters["iterative"])
+        cipher_params.append(parameters.get("fixedVariables"))
+        cipher_params.append(parameters.get("blockedCharacteristics"))
+        cipher_params.append(parameters.get("nummessages"))
 
         stp_file = "tmp/{}{}.stp".format(cipher.getName(), rnd_string_tmp)
         # Start STP
-        cipher.createSTP(stp_file, cipher_parameters)
+        cipher.createSTP(stp_file, cipher_params)
         subprocess.check_output([PATH_STP, "--exit-after-CNF",
                                  "--output-CNF", stp_file])
 
@@ -89,6 +90,7 @@ def findMinWeightCharacteristic(cipher, parameters):
         cipher_params.append(parameters["iterative"])
         cipher_params.append(parameters.get("fixedVariables"))
         cipher_params.append(parameters.get("blockedCharacteristics"))
+        cipher_params.append(parameters.get("nummessages"))
 
         # Construct problem instance for given parameters
         stp_file = "tmp/{}.stp".format(cipher.getName())
@@ -144,6 +146,7 @@ def findAllCharacteristics(cipher, parameters):
         cipher_params.append(parameters["iterative"])
         cipher_params.append(parameters["fixedVariables"])
         cipher_params.append(characteristics_found)
+        cipher_params.append(parameters.get("nummessages"))
 
         stp_file = "tmp/{}{}.stp".format(cipher.getName(), rnd_string_tmp)
 

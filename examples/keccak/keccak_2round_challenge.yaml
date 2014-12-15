@@ -1,0 +1,15 @@
+# Find a preimage for the 2-round challenge for Keccak
+# r = 240, c = 160
+---
+cipher: keccak
+rounds: 2
+wordsize: 16
+mode: 0
+fixedVariables:
+- s420: "0x8001"
+- s002: "0xb87a"
+- s102: "0x1a98"
+- s202: "0x8fda"
+- s302: "0x60db"
+- s402: "0xfdae"
+...
