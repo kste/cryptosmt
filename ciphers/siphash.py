@@ -5,219 +5,202 @@ Created on Mar 28, 2014
 '''
 
 from parser import stpcommands
-from cipher import AbstractCipher
+from ciphers.cipher import AbstractCipher
 
-import random
+from parser.stpcommands import getStringLeftRotate as rotl
+from parser.stpcommands import getStringRightRotate as rotr
+
 
 class SipHashCipher(AbstractCipher):
+    """
+    Represents the differential behaviour of SipHash and can be used
+    to find differential characteristics for the given parameters.
+    """
+    num_messages = 1
 
-    msgblocks = 1
-
-    def __init__(self, msgblocks):
-        self.msgblocks = msgblocks
-        return
- 
     def getName(self):
-        return "siphash"
-    
-    def getFormatString(self):
-        return ['m', 'v0', 'v1', 'v2', 'v3', 'a0', 'a1', 'a2', 'a3', 'w0', 'w1', 'w2', 'w3', 'weight']
-
-    def createSTP(self, filename, cipherParameters):
         """
-        Creates an STP file to find a characteristic for SipHash with the given parameters.
-        """        
+        Returns the name of the cipher.
+        """
+        return "siphash"
+
+    def getFormatString(self):
+        return ['m', 'v0', 'v1', 'v2', 'v3', 'a0', 'a1', 'a2', 'a3',
+                'w0', 'w1', 'w2', 'w3', 'weight']
+
+    def createSTP(self, stp_filename, cipherParameters):
+        """
+        Creates an STP file to find a characteristic for SipHash with
+        the given parameters.
+        """
         wordsize = cipherParameters[0]
         rounds = cipherParameters[1]
         weight = cipherParameters[2]
-        isIterative = cipherParameters[3]
-        varsFixed = cipherParameters[4]
-        blockedCharacteristics = cipherParameters[5]
+        #is_iterative = cipherParameters[3]
+        fixed_vars = cipherParameters[4]
+        chars_blocked = cipherParameters[5]
+        self.num_messages = cipherParameters[6]
 
-        msgblocks = self.msgblocks
-        
-        with open(filename, 'w') as file:
-            file.write("% Input File for STP\n% Siphash w={} rounds={}\n\n\n".format(wordsize, rounds))
-               
-            # Setup variable
+        with open(stp_filename, 'w') as stp_file:
+            stp_file.write("% Input File for STP\n% Siphash w={} "
+                           "rounds={}\n\n\n".format(wordsize, rounds))
+
+            # Setup variables
             # state = v0, v1, v2, v3
             # intermediate values = a0, a1, a2, a3
-            v0 = ["v0{}".format(i) for i in range((rounds + 1) * msgblocks)]
-            v1 = ["v1{}".format(i) for i in range((rounds + 1) * msgblocks)]
-            v2 = ["v2{}".format(i) for i in range((rounds + 1) * msgblocks)]
-            v3 = ["v3{}".format(i) for i in range((rounds + 1) * msgblocks)]
+            v0 = ["v0{}".format(i) for i in range((rounds + 1) * self.num_messages)]
+            v1 = ["v1{}".format(i) for i in range((rounds + 1) * self.num_messages)]
+            v2 = ["v2{}".format(i) for i in range((rounds + 1) * self.num_messages)]
+            v3 = ["v3{}".format(i) for i in range((rounds + 1) * self.num_messages)]
 
-            a0 = ["a0{}".format(i) for i in range((rounds + 1) * msgblocks)]
-            a1 = ["a1{}".format(i) for i in range((rounds + 1) * msgblocks)]
-            a2 = ["a2{}".format(i) for i in range((rounds + 1) * msgblocks)]
-            a3 = ["a3{}".format(i) for i in range((rounds + 1) * msgblocks)]
+            a0 = ["a0{}".format(i) for i in range((rounds + 1) * self.num_messages)]
+            a1 = ["a1{}".format(i) for i in range((rounds + 1) * self.num_messages)]
+            a2 = ["a2{}".format(i) for i in range((rounds + 1) * self.num_messages)]
+            a3 = ["a3{}".format(i) for i in range((rounds + 1) * self.num_messages)]
 
-            m = ["m{}".format(i) for i in range(msgblocks)]
-            
+            m = ["m{}".format(i) for i in range(self.num_messages)]
+
             # w = weight of each modular addition
-            w0 = ["w0{}".format(i) for i in range(rounds* msgblocks)]
-            w1 = ["w1{}".format(i) for i in range(rounds* msgblocks)]
-            w2 = ["w2{}".format(i) for i in range(rounds* msgblocks)]
-            w3 = ["w3{}".format(i) for i in range(rounds* msgblocks)]
-            
-            StpCommands().setupVariables(file, v0, wordsize)
-            StpCommands().setupVariables(file, v1, wordsize)
-            StpCommands().setupVariables(file, v2, wordsize)
-            StpCommands().setupVariables(file, v3, wordsize)
-            StpCommands().setupVariables(file, a0, wordsize)
-            StpCommands().setupVariables(file, a1, wordsize)
-            StpCommands().setupVariables(file, a2, wordsize)
-            StpCommands().setupVariables(file, a3, wordsize)            
-            StpCommands().setupVariables(file, w0, wordsize)
-            StpCommands().setupVariables(file, w1, wordsize)
-            StpCommands().setupVariables(file, w2, wordsize)
-            StpCommands().setupVariables(file, w3, wordsize)
-            StpCommands().setupVariables(file, m, wordsize)
-            
-            StpCommands().setupWeightComputation(file, weight, w0 + w1 + w2 + w3, wordsize, 1)
-            
-            for block in range(self.msgblocks):
-                self.setupSipBlock(file, block, rounds, m, v0, v1, v2, v3,
-                                                a0, a1, a2, a3,
-                                                w0, w1, w2, w3, wordsize)
-            
+            w0 = ["w0{}".format(i) for i in range(rounds * self.num_messages)]
+            w1 = ["w1{}".format(i) for i in range(rounds * self.num_messages)]
+            w2 = ["w2{}".format(i) for i in range(rounds * self.num_messages)]
+            w3 = ["w3{}".format(i) for i in range(rounds * self.num_messages)]
 
+            stpcommands.setupVariables(stp_file, v0 + v1 + v2 + v3, wordsize)
+            stpcommands.setupVariables(stp_file, a0 + a1 + a2 + a3, wordsize)
+            stpcommands.setupVariables(stp_file, w0 + w1 + w2 + w3, wordsize)
+            stpcommands.setupVariables(stp_file, m, wordsize)
 
-            # # # Internal Collision
-            # zeroString = "0hex" + "0"*(wordsize / 4)
-            # StpCommands().assertVariableValue(file, v0[rounds], zeroString)
-            # StpCommands().assertVariableValue(file, v1[rounds], zeroString)
-            # StpCommands().assertVariableValue(file, v2[rounds], zeroString)
-            # StpCommands().assertVariableValue(file, v3[rounds], zeroString)
-            # StpCommands().assertVariableValue(file, v0[0], zeroString)
-            # StpCommands().assertVariableValue(file, v1[0], zeroString)
-            # StpCommands().assertVariableValue(file, v2[0], zeroString)         
-            # StpCommands().assertVariableValue(file, v3[0], zeroString)
-            # StpCommands().assertNonZero(file, m, wordsize)
+            stpcommands.setupWeightComputation(stp_file, weight, w0 + w1 + w2 + w3,
+                                               wordsize, 1)
 
-            # file.write(self.getStringForCollision(v0[rounds], v1[rounds], v2[rounds], v3[rounds], wordsize))
+            for block in range(self.num_messages):
+                self.setupSipBlock(stp_file, block, rounds, m, v0, v1, v2, v3,
+                                   a0, a1, a2, a3, w0, w1, w2, w3, wordsize)
 
-            # #  # # Internal Collision 1 block only!
-            # zeroString = "0hex" + "0"*(wordsize / 4)
-            # StpCommands().assertVariableValue(file, v0[rounds], zeroString)
-            # #StpCommands().assertVariableValue(file, v1[rounds], zeroString)
-            # StpCommands().assertVariableValue(file, v2[rounds], zeroString)
-            # StpCommands().assertVariableValue(file, v3[rounds], zeroString)
-            # StpCommands().assertVariableValue(file, v0[0], zeroString)
-            # StpCommands().assertVariableValue(file, v1[0], zeroString)
-            # StpCommands().assertVariableValue(file, v2[0], zeroString)         
-            # StpCommands().assertVariableValue(file, v3[0], v1[rounds])
-            # StpCommands().assertVariableValue(file, m[0], zeroString)
-            # StpCommands().assertVariableValue(file, m[1], zeroString)
-            # StpCommands().assertNonZero(file, [v3[0]], wordsize)
-            #file.write(self.getStringForCollision(v0[rounds], v1[rounds], v2[rounds], v3[rounds], wordsize))
+            # TODO: There are many different attack scenarios interesting here,
+            #       but no interface exists at the moment to support this
+            #       without using different "ciphers".
 
+            ## Uncomment to search for internal collision
+            # zero_string = "0hex" + "0"*(wordsize / 4)
+            # stpcommands.assertVariableValue(stp_file, v0[rounds], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v1[rounds], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v2[rounds], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v3[rounds], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v0[0], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v1[0], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v2[0], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v3[0], zero_string)
+            # stpcommands.assertNonZero(stp_file, m, wordsize)
+            # stp_file.write(self.getStringForCollision(v0[rounds], v1[rounds],
+            #                v2[rounds], v3[rounds], wordsize))
 
+            ## Uncomment to search for internal collision for a single block
+            # zero_string = "0hex" + "0"*(wordsize / 4)
+            # stpcommands.assertVariableValue(stp_file, v0[rounds], zero_string)
+            # #stpcommands.assertVariableValue(stp_file, v1[rounds], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v2[rounds], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v3[rounds], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v0[0], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v1[0], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v2[0], zero_string)
+            # stpcommands.assertVariableValue(stp_file, v3[0], v1[rounds])
+            # stpcommands.assertVariableValue(stp_file, m[0], zero_string)
+            # stpcommands.assertVariableValue(stp_file, m[1], zero_string)
+            # stpcommands.assertNonZero(stp_file, [v3[0]], wordsize)
+            # stp_file.write(self.getStringForCollision(v0[rounds], v1[rounds],
+            #                v2[rounds], v3[rounds], wordsize))
 
-            # # Key Collision
-            # StpCommands().assertNonZero(file, [v0[0], v1[0]], wordsize)
-            # StpCommands().assertVariableValue(file, v0[0], v3[0])
-            # StpCommands().assertVariableValue(file, v1[0], v2[0])
+            ## Uncomment to search for Key Collisions
+            # stpcommands.assertNonZero(stp_file, [v0[0], v1[0]], wordsize)
+            # stpcommands.assertVariableValue(stp_file, v0[0], v3[0])
+            # stpcommands.assertVariableValue(stp_file, v1[0], v2[0])
+            # stp_file.write(self.getStringForCollision(v0[rounds], v1[rounds],
+            #                v2[rounds], v3[rounds], wordsize))
 
+            ## Uncomment to search for message collision
+            stpcommands.assertNonZero(stp_file, m, wordsize)
+            zero_string = "0hex" + "0"*(wordsize / 4)
+            stpcommands.assertVariableValue(stp_file, v0[0], zero_string)
+            stpcommands.assertVariableValue(stp_file, v1[0], zero_string)
+            stpcommands.assertVariableValue(stp_file, v2[0], zero_string)
+            stpcommands.assertVariableValue(stp_file, v3[0], zero_string)
+            stp_file.write(self.getStringForCollision(v0[rounds*self.num_messages],
+                                                      v1[rounds*self.num_messages],
+                                                      v2[rounds*self.num_messages],
+                                                      v3[rounds*self.num_messages],
+                                                      wordsize))
 
-            # file.write(self.getStringForCollision(v0[rounds], v1[rounds], v2[rounds], v3[rounds], wordsize))
-
-
-            # Message Collision        
-            StpCommands().assertNonZero(file, m, wordsize)
-            zeroString = "0hex" + "0"*(wordsize / 4)
-            StpCommands().assertVariableValue(file, v0[0], zeroString)
-            StpCommands().assertVariableValue(file, v1[0], zeroString)
-            StpCommands().assertVariableValue(file, v2[0], zeroString)
-            StpCommands().assertVariableValue(file, v3[0], zeroString)
-
-            #Assert collision
-            file.write(self.getStringForCollision(v0[rounds*msgblocks], v1[rounds*msgblocks], v2[rounds*msgblocks], v3[rounds*msgblocks], wordsize))
-
-            # # Distinguisher
+            ## Uncomment to search for characteristic / distinguisher
             # for i in m:
-            #     zeroString = "0hex" + "0"*(wordsize / 4)
-            #     StpCommands().assertVariableValue(file, i, zeroString)
+            #     zero_string = "0hex" + "0"*(wordsize / 4)
+            #     stpcommands.assertVariableValue(stp_file, i, zero_string)
 
-            # StpCommands().assertNonZero(file, v0 + v1 + v2 + v3, wordsize)
+            # stpcommands.assertNonZero(stp_file, v0 + v1 + v2 + v3, wordsize)
 
-            
-            # Iterative characteristics only
-            # Input difference = Output difference               
-            if(varsFixed):
-                for key, value in varsFixed.iteritems():
-                    StpCommands().assertVariableValue(file, key, value)
-                    
-            if(blockedCharacteristics):
-                for char in blockedCharacteristics:
-                    StpCommands().blockCharacteristic(file, char, wordsize)
-            
-            StpCommands().setupQuery(file)
+            if fixed_vars:
+                for key, value in fixed_vars.iteritems():
+                    stpcommands.assertVariableValue(stp_file, key, value)
+
+            if chars_blocked:
+                for char in chars_blocked:
+                    stpcommands.blockCharacteristic(stp_file, char, wordsize)
+
+            stpcommands.setupQuery(stp_file)
 
         return
 
-    def setupSipBlock(self, file, block, rounds, m, v0, v1, v2, v3,
-                                a0, a1, a2, a3,
-                                w0, w1, w2, w3, wordsize):
-        if(rounds == 1):
-            round = block
-            file.write(self.getStringForSipRound(v0[round], v1[round], v2[round], "BVXOR({}, {})".format(m[block], v3[round]),
-                           a0[round], a1[round], a2[round], a3[round],
-                           v0[round+1], "BVXOR({}, {})".format(m[block], v1[round+1]), v2[round+1], v3[round+1], 
-                           w0[round], w1[round], w2[round], w3[round], wordsize))      
+    def setupSipBlock(self, stp_file, block, rounds, m, v0, v1, v2, v3,
+                      a0, a1, a2, a3, w0, w1, w2, w3, wordsize):
+        if rounds == 1:
+            rnd = block
+            stp_file.write(self.getStringForSipRound(
+                v0[rnd], v1[rnd], v2[rnd], "BVXOR({}, {})".format(m[block], v3[rnd]),
+                a0[rnd], a1[rnd], a2[rnd], a3[rnd], v0[rnd+1],
+                "BVXOR({}, {})".format(m[block], v1[rnd+1]), v2[rnd+1],
+                v3[rnd+1], w0[rnd], w1[rnd], w2[rnd], w3[rnd], wordsize))
             return
-        for round in range(rounds*block, rounds*(block+1)):
-            if(round == round*block):
+
+        for rnd in range(rounds*block, rounds*(block+1)):
+            if rnd == rnd*block:
                 #Add message block
-                file.write(self.getStringForSipRound(v0[round], v1[round], v2[round], "BVXOR({}, {})".format(m[block], v3[round]),
-                                           a0[round], a1[round], a2[round], a3[round],
-                                           v0[round+1], v1[round+1], v2[round+1], v3[round+1], 
-                                           w0[round], w1[round], w2[round], w3[round], wordsize))
-            elif(round == (round*block + (rounds - 1))):
+                stp_file.write(self.getStringForSipRound(
+                    v0[rnd], v1[rnd], v2[rnd], "BVXOR({}, {})".format(m[block], v3[rnd]),
+                    a0[rnd], a1[rnd], a2[rnd], a3[rnd], v0[rnd+1], v1[rnd+1],
+                    v2[rnd+1], v3[rnd+1], w0[rnd], w1[rnd], w2[rnd], w3[rnd], wordsize))
+            elif rnd == (rnd*block + (rounds - 1)):
                 #Add message block
-                file.write(self.getStringForSipRound(v0[round], v1[round], v2[round], v3[round],
-                                           a0[round], a1[round], a2[round], a3[round],
-                                           v0[round+1], "BVXOR({}, {})".format(m[block], v1[round+1]), v2[round+1], v3[round+1], 
-                                           w0[round], w1[round], w2[round], w3[round], wordsize))
+                stp_file.write(self.getStringForSipRound(
+                    v0[rnd], v1[rnd], v2[rnd], v3[rnd], a0[rnd],
+                    a1[rnd], a2[rnd], a3[rnd], v0[rnd+1],
+                    "BVXOR({}, {})".format(m[block], v1[rnd+1]), v2[rnd+1],
+                    v3[rnd+1], w0[rnd], w1[rnd], w2[rnd], w3[rnd], wordsize))
             else:
-                file.write(self.getStringForSipRound(v0[round], v1[round], v2[round], v3[round],
-                                           a0[round], a1[round], a2[round], a3[round],
-                                           v0[round+1], v1[round+1], v2[round+1], v3[round+1], 
-                                           w0[round], w1[round], w2[round], w3[round], wordsize))
-
-
+                stp_file.write(self.getStringForSipRound(
+                    v0[rnd], v1[rnd], v2[rnd], v3[rnd], a0[rnd],
+                    a1[rnd], a2[rnd], a3[rnd], v0[rnd+1], v1[rnd+1],
+                    v2[rnd+1], v3[rnd+1], w0[rnd], w1[rnd], w2[rnd],
+                    w3[rnd], wordsize))
 
     def getStringForCollision(self, v0, v1, v2, v3, wordsize):
         #Collision including the XOR of the message
         command = ""
-        command += "ASSERT(0hex{} = BVXOR({}, BVXOR({}, BVXOR({}, {}))));\n".format("0"*(wordsize / 4), v0, v1, v2, v3)
-        return command        
-    
-    def constructParametersList(self, rounds, wordsize, weight):
+        command += "ASSERT(0hex{} = BVXOR({}, BVXOR({}, BVXOR({}, {}))));\n".format(
+            "0"*(wordsize / 4), v0, v1, v2, v3)
+        return command
+
+    def getParamList(self, rounds, wordsize, weight):
         """
-        TODO:
+        Returns a list of the parameters for SipHash.
         """
         return [wordsize, rounds, weight]
-    
-        
-    # def setupSipRound(self, file, m, v0_in, v1_in, v2_in, v3_in,
-    #                               a0, a1, a2, a3,
-    #                               v0_out, v1_out, v2_out, v3_out, 
-    #                               w0, w1, w2, w3, wordsize):
-    #     file.write(self.getStringForSipRound(m, v0_in, v1_in, v2_in, v3_in,
-    #                               a0, a1, a2, a3,
-    #                               v0_out, v1_out, v2_out, v3_out, 
-    #                               w0, w1, w2, w3, wordsize) + '\n')
-    #     return
-    
-    
-    def getStringForSipRound(self, v0_in, v1_in, v2_in, v3_in,
-                                  a0, a1, a2, a3,
-                                  v0_out, v1_out, v2_out, v3_out, 
-                                  w0, w1, w2, w3, wordsize):
+
+    def getStringForSipRound(self, v0_in, v1_in, v2_in, v3_in, a0, a1, a2, a3,
+                             v0_out, v1_out, v2_out, v3_out, w0, w1, w2, w3,
+                             wordsize):
         """
         Returns a string representing SipRound in STP.
-        
 
         a0 = (v1 + v0) <<< 32
         a1 = (v1 + v0) ^ (v1 <<< 13)
@@ -230,92 +213,65 @@ class SipHashCipher(AbstractCipher):
         v3_out = (a0 + a3) ^ (a3 <<< 21)
         """
         command = ""
-        
+
         #Assert intermediate values
 
         #Rotate right to get correct output value
         #a0
         command += "ASSERT("
-        command += StpCommands().getStringAdd(v1_in, 
-                                              v0_in, 
-                                              StpCommands().getStringRightRotate(a0, 32, wordsize), wordsize)
+        command += stpcommands.getStringAdd(
+            v1_in, v0_in, rotr(a0, 32, wordsize), wordsize)
         command += ");\n"
 
         #a1
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(a1, 
-            StpCommands().getStringLeftRotate(v1_in, 13, wordsize), 
-            StpCommands().getStringRightRotate(a0, 32, wordsize))
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(
+            a1, rotl(v1_in, 13, wordsize), rotr(a0, 32, wordsize))
 
         #a2
         command += "ASSERT("
-        command += StpCommands().getStringAdd(v2_in, v3_in, a2, wordsize)
-        command += ");\n" 
+        command += stpcommands.getStringAdd(v2_in, v3_in, a2, wordsize)
+        command += ");\n"
 
         #a3
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(a3, 
-                    StpCommands().getStringLeftRotate(v3_in, 16, wordsize), 
-                    a2)
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(
+            a3, rotl(v3_in, 16, wordsize), a2)
 
         #v0_out
         command += "ASSERT("
-        command += StpCommands().getStringAdd(a0, a3, v0_out, wordsize)
-        command += ");\n"        
+        command += stpcommands.getStringAdd(a0, a3, v0_out, wordsize)
+        command += ");\n"
 
         #v1_out
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(v1_out,
-            StpCommands().getStringLeftRotate(a1, 17, wordsize), 
-            StpCommands().getStringRightRotate(v2_out, 32, wordsize))        
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(
+            v1_out, rotl(a1, 17, wordsize), rotr(v2_out, 32, wordsize))
 
         #v2_out
         command += "ASSERT("
-        command += StpCommands().getStringAdd(a2, 
-                                              a1, 
-                                              StpCommands().getStringRightRotate(v2_out, 32, wordsize), wordsize)
-        command += ");\n" 
+        command += stpcommands.getStringAdd(
+            a2, a1, rotr(v2_out, 32, wordsize), wordsize)
+        command += ");\n"
 
         #v3_out
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(v3_out, 
-                    StpCommands().getStringLeftRotate(a3, 21, wordsize), 
-                    v0_out)        
-
-
-
-
-
-
-        
-                                                                  
-        #Compute Weights for modular addition
-        # Use Hamming weight
-        # command += "ASSERT({} = {} | {} | {});\n".format(w0, v1_in, v0_in, a0)
-        # command += "ASSERT({} = {} | {} | {});\n".format(w1, v2_in, "BVXOR({}, {})".format(v3_in, m), a2)
-        # command += "ASSERT({} = {} | {} | {});\n".format(w2, a0, a3, v0_out)
-        # command += "ASSERT({} = {} | {} | {});\n".format(w3, a2, a1, v2_out)
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(
+            v3_out, rotl(a3, 21, wordsize), v0_out)
 
         # Lipmaa and Moriai
-        
         command += "ASSERT({0} = ~".format(w0)
-        command += StpCommands().getStringEq(v1_in, 
-                                            v0_in,
-                                            StpCommands().getStringRightRotate(a0, 32, wordsize), wordsize)
+        command += stpcommands.getStringEq(
+            v1_in, v0_in, rotr(a0, 32, wordsize), wordsize)
         command += ");\n"
 
         command += "ASSERT({0} = ~".format(w1)
-        command += StpCommands().getStringEq(v2_in, v3_in, a2, wordsize)
+        command += stpcommands.getStringEq(v2_in, v3_in, a2, wordsize)
         command += ");\n"
 
         command += "ASSERT({0} = ~".format(w2)
-        command += StpCommands().getStringEq(a0, a3, v0_out, wordsize)
+        command += stpcommands.getStringEq(a0, a3, v0_out, wordsize)
         command += ");\n"
 
         command += "ASSERT({0} = ~".format(w3)
-        command += StpCommands().getStringEq(a2, 
-                                            a1,
-                                            StpCommands().getStringRightRotate(v2_out, 32, wordsize), wordsize)
+        command += stpcommands.getStringEq(
+            a2, a1, rotr(v2_out, 32, wordsize), wordsize)
         command += ");\n"
 
-                
         return command
-
-    
-    
