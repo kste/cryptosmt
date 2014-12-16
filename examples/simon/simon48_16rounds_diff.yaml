@@ -1,0 +1,14 @@
+# Example input file for SIMON48 - 16 Rounds to find all characteristics 
+# contributing to the probability of the differential (11, 140) ---> (111, 40)
+---
+cipher: simon
+sweight: 50
+rounds: 16
+wordsize: 24
+mode: 4
+fixedVariables:
+- x0: "0x000011"
+- y0: "0x000140"
+- x16: "0x000111"
+- y16: "0x000040"
+...

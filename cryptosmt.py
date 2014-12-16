@@ -6,7 +6,7 @@ Created on Mar 28, 2014
 
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, siphash, simonrk,
-                     chaskeymac, chaskeymachalf, simonkeyrc)
+                     chaskeymachalf, simonkeyrc)
 from config import *
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -34,8 +34,6 @@ def startsearch(tool_parameters):
         cipher = simonrk.SimonRkCipher()
     elif tool_parameters["cipher"] == 'simonkeyrc':
         cipher = simonkeyrc.SimonKeyRcCipher()
-    elif tool_parameters["cipher"] == 'chaskey':
-        cipher = chaskeymac.ChasKeyMac()
     elif tool_parameters["cipher"] == 'chaskeyhalf':
         cipher = chaskeymachalf.ChasKeyMacHalf()
     else:
@@ -114,6 +112,8 @@ def loadparameters(args):
                 params["sweight"] = doc["sweight"]
             if "nummessages" in doc:
                 params["nummessages"] = doc["nummessages"]
+            if "boolector" in doc:
+                params["boolector"] = doc["boolector"]
             if "fixedVariables" in doc:
                 fixed_vars = {}
                 for variable in doc["fixedVariables"]:

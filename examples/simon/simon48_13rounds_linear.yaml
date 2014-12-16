@@ -1,0 +1,10 @@
+# Example input file for SIMON32 - 13 rounds to find the
+# best linear characteristic. The search starts at 
+# weight 0.
+---
+cipher: simonlinear
+sweight: 0
+rounds: 13
+wordsize: 24
+mode: 0
+...
