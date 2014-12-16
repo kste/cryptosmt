@@ -1,0 +1,17 @@
+# Example input file for SIMON48 - 11 rounds to find all characteristics 
+# contributing to the probability of the differential 
+# (202040, 82921) ---> (808424, 84A905)
+---
+cipher: speck
+sweight: 47
+rounds: 11
+wordsize: 24
+mode: 4
+fixedVariables:
+- x0: "0x202040"
+- y0: "0x082921"
+- x11: "0x808424"
+- y11: "0x84A905"
+...
+
+

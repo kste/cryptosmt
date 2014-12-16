@@ -4,95 +4,122 @@ Created on Mar 28, 2014
 @author: stefan
 '''
 
-from parser.stpCommands import *
-from cipher import AbstractCipher
+from parser import stpcommands
+from ciphers.cipher import AbstractCipher
 
-import random
+from parser.stpcommands import getStringRightRotate as rotr
+from parser.stpcommands import getStringLeftRotate as rotl
+
 
 class SpeckCipher(AbstractCipher):
-    
+    """
+    Represents the differential behaviour of SPECK and can be used
+    to find differential characteristics for the given parameters.
+    """
+
     def getName(self):
+        """
+        Returns the name of the cipher.
+        """
         return "speck"
-    
-    def createSTP(self, filename, cipherParameters):
+
+    def getFormatString(self):
+        """
+        Returns the print format.
+        """
+        return ['x', 'y', 'w']
+
+    def createSTP(self, stp_filename, cipherParameters):
+        """
+        Creates an STP file to find a characteristic for SPECK with
+        the given parameters.
+        """        
         wordsize = cipherParameters[0]
-        rotAlpha = cipherParameters[1]
-        rotBeta = cipherParameters[2]
+        rot_alpha = cipherParameters[1]
+        rot_beta = cipherParameters[2]
         rounds = cipherParameters[3]
         weight = cipherParameters[4]
-        isIterative = cipherParameters[5]
-        varsFixed = cipherParameters[6]
-    
-        with open(filename, 'w') as file:
-            file.write("% Input File for STP\n% Speck w={} alpha={} beta={} rounds={}\n\n\n".format(wordsize, rotAlpha, rotBeta, rounds))
-        
+        is_iterative = cipherParameters[5]
+        fixed_vars = cipherParameters[6]
+        chars_blocked = cipherParameters[7]
+
+        with open(stp_filename, 'w') as stp_file:
+            stp_file.write("% Input File for STP\n% Speck w={} alpha={} beta={} "
+                           "rounds={}\n\n\n".format(wordsize, rot_alpha, rot_beta,
+                                                    rounds))
+
             # Setup variable
             # x = left, y = right
             # w = weight
             x = ["x{}".format(i) for i in range(rounds + 1)]
             y = ["y{}".format(i) for i in range(rounds + 1)]
             w = ["w{}".format(i) for i in range(rounds)]
-        
-        
-            StpCommands().setupVariables(file, x, wordsize)
-            StpCommands().setupVariables(file, y, wordsize)
-            StpCommands().setupVariables(file, w, wordsize)
-        
+
+            stpcommands.setupVariables(stp_file, x, wordsize)
+            stpcommands.setupVariables(stp_file, y, wordsize)
+            stpcommands.setupVariables(stp_file, w, wordsize)
+
             # Ignore MSB
-            StpCommands().setupWeightComputation(file, weight, w, wordsize, 1)
-                    
+            stpcommands.setupWeightComputation(stp_file, weight, w, wordsize, 1)
+
             for i in range(rounds):
-                self.setupSpeckRound(file, x[i], y[i], x[i+1], y[i+1], w[i], rotAlpha, rotBeta, wordsize)
-            
+                self.setupSpeckRound(stp_file, x[i], y[i], x[i+1], y[i+1], w[i],
+                                     rot_alpha, rot_beta, wordsize)
+
             # No all zero characteristic
-            StpCommands().assertNonZero(file, x + y, wordsize)
-            
+            stpcommands.assertNonZero(stp_file, x + y, wordsize)
+
             # Iterative characteristics only
             # Input difference = Output difference
-            if(isIterative):
-                StpCommands().assertVariableValue(file, x[0], x[rounds])
-                StpCommands().assertVariableValue(file, y[0], y[rounds])
-                
-            if(varsFixed):
-                for key, value in varsFixed.iteritems():
-                    StpCommands().assertVariableValue(file, key, value)
-            
-            StpCommands().setupQuery(file)
+            if is_iterative:
+                stpcommands.assertVariableValue(stp_file, x[0], x[rounds])
+                stpcommands.assertVariableValue(stp_file, y[0], y[rounds])
+
+            if fixed_vars:
+                for key, value in fixed_vars.iteritems():
+                    stpcommands.assertVariableValue(stp_file, key, value)
+
+            if chars_blocked:
+                for char in chars_blocked:
+                    stpcommands.blockCharacteristic(stp_file, char, wordsize)
+
+            stpcommands.setupQuery(stp_file)
 
         return
-    
-    def constructParametersList(self, rounds, wordsize, weight):
+
+    def getParamList(self, rounds, wordsize, weight):
         """
-        TODO:
+        Returns a list of the parameters for SPECK.
         """
-        if(wordsize == 16):
+        if wordsize == 16:
             return [wordsize, 7, 2, rounds, weight]
         else:
             return [wordsize, 8, 3, rounds, weight]
-    
-    def setupSpeckRound(self, file, x_in, y_in, x_out, y_out, w, rotAlpha, rotBeta, wordsize):
-        file.write(self.getStringForSpeckRound(x_in, y_in, x_out, y_out, w, rotAlpha, rotBeta, wordsize) + '\n')
-        return
-        
-    def getStringForSpeckRound(self, x_in, y_in, x_out, y_out, w, rotAlpha, rotBeta, wordsize):
+
+    def setupSpeckRound(self, stp_file, x_in, y_in, x_out, y_out, w, rot_alpha,
+                        rot_beta, wordsize):
+        """
+        Model for differential behaviour of one round SPECK
+        """
         command = ""
-        
-        #Assert(x_in >>> rotAlpha + y_in = x_out)
+
+        #Assert(x_in >>> rot_alpha + y_in = x_out)
         command += "ASSERT("
-        command += StpCommands().getStringAdd(StpCommands().getStringRightRotate(x_in, rotAlpha, wordsize), y_in, x_out, wordsize)
+        command += stpcommands.getStringAdd(rotr(x_in, rot_alpha, wordsize),
+                                            y_in, x_out, wordsize)
         command += ");\n"
-        
-        #Assert(x_out xor (y_in <<< rotBeta) = x_in)
+
+        #Assert(x_out xor (y_in <<< rot_beta) = x_in)
         command += "ASSERT(" + y_out + " = "
         command += "BVXOR(" + x_out + ","
-        command += StpCommands().getStringLeftRotate(y_in, rotBeta, wordsize)
+        command += rotl(y_in, rot_beta, wordsize)
         command += "));\n"
-        
+
         #For weight computation
         command += "ASSERT({0} = ~".format(w)
-        command += StpCommands().getStringEq(StpCommands().getStringRightRotate(x_in, rotAlpha, wordsize), y_in, x_out, wordsize)
-        command += ");" 
-        
-        return command
-    
-    
+        command += stpcommands.getStringEq(rotr(x_in, rot_alpha, wordsize),
+                                           y_in, x_out, wordsize)
+        command += ");\n"
+
+        stp_file.write(command)
+        return

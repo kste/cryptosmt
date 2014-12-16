@@ -1,0 +1,17 @@
+# Example input file for SPECK32 - 9 rounds to find all characteristics 
+# contributing to the probability of the differential 
+# (8054, A900) ---> (40, 542)
+---
+cipher: speck
+sweight: 30
+rounds: 9
+wordsize: 16
+mode: 4
+fixedVariables:
+- x0: "0x8054"
+- y0: "0xA900"
+- x9: "0x0040"
+- y9: "0x0542"
+...
+
+

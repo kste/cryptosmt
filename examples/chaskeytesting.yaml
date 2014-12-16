@@ -1,0 +1,14 @@
+# Example input file to search a differential
+# for Simon32 and 4 rounds
+---
+cipher: chaskeyhalf
+sweight: 0
+rounds: 1
+wordsize: 32
+mode: 0
+fixedVariables:
+- v00: "0x80109080"
+- v10: "0x800088c0"
+- v20: "0x80c08000"
+- v30: "0x90801000"
+...
