@@ -39,7 +39,8 @@ class SimonKeyRcCipher(AbstractCipher):
         for msg in range(messages_print):
             format_string.append('x{}r'.format(msg))
             format_string.append('y{}r'.format(msg))
-        format_string += ['dx', 'dy', 'key']
+        format_string += ['dx1r', 'dy1r', 'key']
+
         return format_string
 
     def createSTP(self, stp_filename, cipherParameters):
@@ -89,16 +90,18 @@ class SimonKeyRcCipher(AbstractCipher):
                                          and_out[i], key[i], wordsize)
 
             #Differences between x_0 and x_i
-            if self.num_messages > 1:
-                delta_x = ["dx{}".format(i) for i in range(rounds + 1)]
-                delta_y = ["dy{}".format(i) for i in range(rounds + 1)]
+            for msg in range(1, self.num_messages):
+                delta_x = ["dx{}r{}".format(msg, i) for i in range(rounds + 1)]
+                delta_y = ["dy{}r{}".format(msg, i) for i in range(rounds + 1)]
                 stpcommands.setupVariables(stp_file, delta_x, wordsize)
                 stpcommands.setupVariables(stp_file, delta_y, wordsize)
                 for i in range(rounds + 1):
                     stp_file.write("ASSERT({} = BVXOR({}, {}));\n".format(
-                        delta_x[i], "x0r{}".format(i), "x1r{}".format(i)))
+                        delta_x[i], "x0r{}".format(i),
+                        "x{}r{}".format(msg, i)))
                     stp_file.write("ASSERT({} = BVXOR({}, {}));\n".format(
-                        delta_y[i], "y0r{}".format(i), "y1r{}".format(i)))
+                        delta_y[i], "y0r{}".format(i),
+                        "y{}r{}".format(msg, i)))
 
             if fixed_vars:
                 for key, value in fixed_vars.iteritems():
