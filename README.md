@@ -38,3 +38,12 @@ References
 
 [5] [Chaskey: An Efficient MAC Algorithm for 32-bit Microcontroller](http://eprint.iacr.org/2014/386)
 
+BibTex
+----------
+```
+@misc{CryptoSMT-ref,
+    author = {{Stefan Kölbl}},
+    title = {{CryptoSMT: An easy to use tool for cryptanalysis of symmetric primitives}},
+    note = {\url{https://github.com/kste/cryptosmt}},
+}
+```
