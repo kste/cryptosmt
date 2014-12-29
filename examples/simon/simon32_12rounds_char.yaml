@@ -1,0 +1,10 @@
+# Example input file for SIMON32 - 12 rounds to find the
+# best differential characteristic. The search starts at 
+# weight 0.
+---
+cipher: simon
+sweight: 0
+rounds: 12
+wordsize: 16
+mode: 0
+...

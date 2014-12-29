@@ -1,0 +1,22 @@
+# Example input file to find possible keys given an input difference.
+---
+cipher: simonkeyrc
+rounds: 7
+wordsize: 16
+mode: 0
+nummessages: 2
+fixedVariables:
+# - key0: "0x8ca4"
+# - key1: "0x91d8"
+# - key2: "0xc7e0"
+# - key3: "0x2d20"
+# - key4: "0xad1b"
+# - key5: "0x0547"
+# - key6: "0x9351"
+- dx0: "0xffff"
+- dy0: "0xffff"
+- x0r7: "0xa7dc"
+- y0r7: "0x3735"
+- x1r7: "0x9d72"
+- y1r7: "0x72bf"
+...
