@@ -115,19 +115,14 @@ class SimonCipher(AbstractCipher):
         x_in_rotalpha = rotl(x_in, rot_alpha, wordsize)
         x_in_rotbeta = rotl(x_in, rot_beta, wordsize)
 
-        #Assert AND Output
-        command += "ASSERT({} = 0hex{});\n".format(
-            stpcommands.getStringForAndDifferential(x_in_rotalpha, x_in_rotbeta,
-                                                    and_out), "f"*(wordsize / 4))
-
-        #Deal with dependent inputs
+                #Deal with dependent inputs
         varibits = "({0} | {1})".format(x_in_rotalpha, x_in_rotbeta)
         doublebits = self.getDoubleBits(x_in, rot_alpha, rot_beta, wordsize)
 
         #Check for valid difference
         firstCheck = "({} & ~{})".format(and_out, varibits)
         secondCheck = "(BVXOR({}, {}) & {})".format(
-            and_out, rotl(and_out, rot_alpha - rot_gamma, wordsize), doublebits)
+            and_out, rotl(and_out, rot_alpha - rot_beta, wordsize), doublebits)
 
         command += "ASSERT({} | {} = 0x{});\n".format(
             firstCheck, secondCheck, "0"*(wordsize / 4))
