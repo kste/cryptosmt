@@ -11,6 +11,9 @@ from config import (PATH_STP, PATH_BOOLECTOR, PATH_CRYPTOMINISAT, MAX_WEIGHT,
 import subprocess
 import random
 import math
+import os
+
+from fractions import gcd
 
 
 def computeProbabilityOfDifferentials(cipher, parameters):
@@ -23,8 +26,12 @@ def computeProbabilityOfDifferentials(cipher, parameters):
     weight = parameters["sweight"]
     diff_prob = 0
     characteristics_found = 0
+    sat_logfile = "tmp/satlog{}.tmp".format(rnd_string_tmp)
 
     while weight < MAX_WEIGHT:
+        if(os.path.isfile(sat_logfile)):
+            os.remove(sat_logfile)
+
         cipher_params = cipher.getParamList(parameters["rounds"],
                                             parameters["wordsize"],
                                             weight)
@@ -45,11 +52,11 @@ def computeProbabilityOfDifferentials(cipher, parameters):
                       str(MAX_CHARACTERISTICS), "--verb", "0",
                       "-s", "0", "output_0.cnf"]
 
-        log_file = open("tmp/satlog.tmp", "w")
+        log_file = open(sat_logfile, "w")
         sat_process = subprocess.Popen(sat_params, stdout=log_file)
         sat_process.wait()
 
-        with open("tmp/satlog.tmp", "r") as sat_output:
+        with open(sat_logfile, "r") as sat_output:
             solutions = 0
             for line in sat_output:
                 if "s SATISFIABLE" in line:
@@ -66,6 +73,84 @@ def computeProbabilityOfDifferentials(cipher, parameters):
             print "\tCharacteristics Found: {}".format(characteristics_found)
             print "\tCurrent Probability: " + str(math.log(diff_prob, 2))
         weight += 1
+
+
+def findBestConstants(cipher, parameters):
+    """
+    Search for the optimal differential or linear characteristics.
+    Works only for SIMON!
+    """
+    weight = parameters["sweight"]
+    wordsize = parameters["wordsize"]
+
+    constantMinWeights = []
+    gamma = parameters["sweight"]
+    for beta in range(0, wordsize):
+        for alpha in range(0, wordsize):
+            weight = 0
+            #Filter cases where alpha = beta
+            if alpha == beta:
+                constantMinWeights.append(0)
+                continue
+            #Filter symmetric cases
+            if beta > alpha:
+                constantMinWeights.append(constantMinWeights[alpha*wordsize + beta])
+                continue
+            #Filter gcd(alpha - beta, n) != 1 cases
+            if gcd(alpha - beta, wordsize) != 1:
+                constantMinWeights.append(1)
+                continue
+
+            while weight < MAX_WEIGHT:
+                #print "Weight: {}".format(weight)
+                cipher_params = cipher.getParamList(parameters["rounds"],
+                                                    parameters["wordsize"],
+                                                    weight)
+                cipher_params[1] = alpha
+                cipher_params[2] = beta
+                cipher_params[3] = gamma
+                cipher_params.append(parameters["iterative"])
+                cipher_params.append(parameters.get("fixedVariables"))
+                cipher_params.append(parameters.get("blockedCharacteristics"))
+                cipher_params.append(parameters.get("nummessages"))
+
+                # Construct problem instance for given parameters
+                stp_file = "tmp/{}_{}const.stp".format(cipher.getName(), gamma)
+                cipher.createSTP(stp_file, cipher_params)
+
+                result = ""
+                if parameters["boolector"]:
+                    #Use STP to create SMTLIB-2
+                    input_file = subprocess.check_output([PATH_STP,
+                                                         "--print-back-SMTLIB2",
+                                                         stp_file])
+
+                    #Start Boolector
+                    opened_process = subprocess.Popen([PATH_BOOLECTOR, "-x", "-m"],
+                                                      stdout=subprocess.PIPE,
+                                                      stdin=subprocess.PIPE)
+                    result = opened_process.communicate(input=input_file)[0]
+                else:
+                    result = subprocess.check_output([PATH_STP, stp_file])
+
+                # Check if a characteristic was found
+                if "Valid" not in result and "unsat" not in result:
+                    #print("Characteristic for {} - Rounds {} - Wordsize {}- "
+                    #      "Weight {}".format(cipher.getName(), parameters["rounds"],
+                    #                         parameters["wordsize"], weight))
+                    print "Alpha: {} Beta: {} Gamma: {} Weight: {}".format(alpha, beta, gamma, weight)
+                    characteristic = ""
+                    if parameters["boolector"]:
+                        characteristic = parsesolveroutput.getCharBoolectorOutput(
+                            result, cipher.getFormatString(), parameters["rounds"])
+                    else:
+                        characteristic = parsesolveroutput.getCharSTPOutput(
+                            result, cipher.getFormatString(), parameters["rounds"])
+                    #characteristic.printText()
+                    break
+                weight += 1
+            constantMinWeights.append(weight)
+    print constantMinWeights
 
 
 def findMinWeightCharacteristic(cipher, parameters):
@@ -93,7 +178,7 @@ def findMinWeightCharacteristic(cipher, parameters):
         cipher_params.append(parameters.get("nummessages"))
 
         # Construct problem instance for given parameters
-        stp_file = "tmp/{}.stp".format(cipher.getName())
+        stp_file = "tmp/{}{}.stp".format(cipher.getName(), parameters["wordsize"])
         cipher.createSTP(stp_file, cipher_params)
 
         result = ""
@@ -183,6 +268,8 @@ def searchCharacteristics(cipher, parameters):
     """
     while True:
         print "Number of rounds: {}".format(parameters["rounds"])
-        findMinWeightCharacteristic(cipher, parameters)
+        parameters["sweight"] = findMinWeightCharacteristic(cipher, parameters)
         print "Rounds:"
         parameters["rounds"] = parameters["rounds"] + 1
+        if(parameters["rounds"] > 16):
+            return

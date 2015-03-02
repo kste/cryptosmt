@@ -4,10 +4,13 @@ Created on Mar 28, 2014
 @author: stefan
 '''
 
+import time
+
 from parser import stpcommands
 from ciphers.cipher import AbstractCipher
 
 from parser.stpcommands import getStringRightRotate as rotr
+from parser.stpcommands import getStringLeftRotate as rotl
 
 
 class SimonLinearCipher(AbstractCipher):
@@ -55,22 +58,41 @@ class SimonLinearCipher(AbstractCipher):
             y = ["y{}".format(i) for i in range(rounds + 1)]
             b = ["b{}".format(i) for i in range(rounds + 1)]
             c = ["c{}".format(i) for i in range(rounds + 1)]
+            and_out = ["andout{}".format(i) for i in range(rounds + 1)]
+            abits = ["abits{}".format(i) for i in range(rounds + 1)]
+
+            #Create tmp variables for weight computation
+            tmpWeight = ["tmp{}r{}".format(j, i) for i in range(rounds) for j in range(wordsize)]
+
+            #Tmp variables for parity checks
+            sbits = ["sbits{}r{}".format(j, i) for i in range(rounds) for j in range(wordsize)]
+            pbits = ["pbits{}r{}".format(j, i) for i in range(rounds) for j in range(wordsize)]
 
             # w = weight
             w = ["w{}".format(i) for i in range(rounds)]
 
             stpcommands.setupVariables(stp_file, x, wordsize)
             stpcommands.setupVariables(stp_file, y, wordsize)
+            stpcommands.setupVariables(stp_file, and_out, wordsize)
             stpcommands.setupVariables(stp_file, b, wordsize)
             stpcommands.setupVariables(stp_file, c, wordsize)
+            stpcommands.setupVariables(stp_file, abits, wordsize)
             stpcommands.setupVariables(stp_file, w, wordsize)
+            stpcommands.setupVariables(stp_file, tmpWeight, wordsize)
+            stpcommands.setupVariables(stp_file, sbits, wordsize)
+            stpcommands.setupVariables(stp_file, pbits, wordsize)
 
             stpcommands.setupWeightComputation(stp_file, weight, w, wordsize)
 
             for i in range(rounds):
-                self.setupSimonRound(stp_file, x[i], y[i], x[i+1], y[i+1], b[i],
-                                     c[i], w[i], rot_alpha, rot_beta, rot_gamma,
-                                     wordsize)
+                indicesFrom = i*wordsize
+                indicesTo = (i+1)*wordsize
+                self.setupSimonRound(stp_file, x[i], y[i], x[i+1], y[i+1], and_out[i],
+                                     b[i], c[i], abits[i], w[i],
+                                     tmpWeight[indicesFrom:indicesTo],
+                                     sbits[indicesFrom:indicesTo],
+                                     pbits[indicesFrom:indicesTo],
+                                     rot_alpha, rot_beta, rot_gamma, wordsize)
 
             # No all zero characteristic
             stpcommands.assertNonZero(stp_file, x + y, wordsize)
@@ -97,30 +119,91 @@ class SimonLinearCipher(AbstractCipher):
         """
         Returns a list of the parameters for SIMON.
         """
-        return [wordsize, 1, 8, 2, rounds, weight]
+        return [wordsize, 8, 1, 2, rounds, weight]
 
-    def setupSimonRound(self, stp_file, x_in, y_in, x_out, y_out, b, c, w,
-                        rot_alpha, rot_beta, rot_gamma, wordsize):
+
+    def setupSimonRound(self, stp_file, x_in, y_in, x_out, y_out, and_out, b, c,
+                        abits, w, tmpWeight, sbits, pbits, rot_alpha, rot_beta,
+                        rot_gamma, wordsize):
         """
         Model for linear behaviour of one round SIMON.
         y[i+1] = x[i]
         x[i+1] = (x[i] <<< 1) & (x[i] <<< 8) ^ y[i] ^ (x[i] << 2)
+
+        This is a loop unrolled version of the model presented in
+        http://eprint.iacr.org/2015/145
         """
         command = ""
+
+        deltarot = rot_alpha - rot_beta
+        lout = y_in
+        lin = "BVXOR(BVXOR({}, {}), {})".format(x_in, rotr(lout, rot_gamma, wordsize), y_out)
+        #lin = "BVXOR({}, {})".format(x_in, rotr(lout, rot_gamma, wordsize))
 
         #Assert(y_out = x_in)
         command += "ASSERT({} = {});\n".format(x_out, y_in)
 
         #Assert for AND linear approximation
-        command += "ASSERT(((~{0} & ~{1} & ~{2}) | {0}) = 0hex{3});\n".format(
-            y_in, b, c, "f"*(wordsize / 4))
+        tmp = "BVXOR(({0} | {1}), {2}) & {2}".format(
+            rotr(lout, rot_alpha, wordsize),
+            rotr(lout, rot_beta, wordsize),
+            lin)
+
+        command += "ASSERT({} = 0x{});\n".format(tmp, "0"*(wordsize / 4))
 
         #Assert for y_out
-        command += "ASSERT({0} = BVXOR({1}, BVXOR({2}, BVXOR({3}, {4}))));\n".format(
-            y_out, x_in, rotr(c, rot_alpha, wordsize), rotr(b, rot_beta, wordsize),
-            rotr(x_out, rot_gamma, wordsize))
+        # command += "ASSERT({0} = BVXOR({1}, BVXOR({2}, BVXOR({3}, {4}))));\n".format(
+        #     y_out, x_in, rotr(lout, rot_alpha, wordsize), rotr(lout, rot_beta, wordsize),
+        #     rotr(x_out, rot_gamma, wordsize))
+        command += "ASSERT({0} = BVXOR({1}, BVXOR({2}, {3})));\n".format(
+            y_out, x_in, rotr(x_out, rot_gamma, wordsize), lin)
 
         #For weight computation
-        command += "ASSERT({0} = {1});".format(w, y_in)
+        #Compute abits
+        loutRotated = rotr(lout, deltarot, wordsize)
+
+        command += "ASSERT({} = ({} & {}));\n".format(tmpWeight[0], lout, loutRotated)
+
+        for i in range(1, wordsize):
+            command += "ASSERT({} = ({} & {}));\n".format(
+                tmpWeight[i], lout, rotr(tmpWeight[i - 1], deltarot, wordsize))
+
+        abits = "BVXOR({}, {})".format(lout, tmpWeight[0])
+        for i in range(1, wordsize):
+            abits = "BVXOR({}, {})".format(tmpWeight[i], abits)
+
+        #abits = y_in #only use weight
+
+        #Weight computation
+        #command += "ASSERT({0} = (IF {1} = 0x{3} THEN BVSUB({4},0x{3},0x{5}1) \
+        #          ELSE {2} ENDIF));\n".format(
+        #            w, y_in, abits, "f"*(wordsize / 4),
+        #            wordsize, "0"*((wordsize / 4) - 1))
+
+        command += "ASSERT({} = {});\n".format(w, abits)
+
+        #Parity Checks
+        command += "ASSERT({} = {});\n".format(
+            sbits[0], rotr("({} & ~{} & ~{})".format(
+                rotr(lout, deltarot, wordsize), lout, rotr(abits, deltarot, wordsize)),
+                1, wordsize))
+
+        command += "ASSERT({} = {});\n".format(
+            pbits[0], rotl("({} & {})".format(sbits[0], lin), 2*deltarot, wordsize))
+
+        for i in range(1, wordsize):
+            command += "ASSERT({} = {});\n".format(
+                sbits[i], rotl("({} & {})".format(
+                    rotl(sbits[i - 1], deltarot, wordsize),
+                    rotr(sbits[i-1], rot_beta, wordsize)),
+                    deltarot, wordsize)
+                )
+            command += "ASSERT({} = {});\n".format(
+                pbits[i], rotl("BVXOR({}, {} & {})".format(
+                    pbits[i - 1], sbits[i], lin), 2*deltarot, wordsize)
+                )
+
+        command += "ASSERT({} = 0x{});\n".format(pbits[wordsize - 1], "0"*(wordsize / 4))
+
         stp_file.write(command)
         return

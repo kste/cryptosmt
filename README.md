@@ -14,13 +14,15 @@ Some of the features are:
 
 The following primitives are supported by CryptoSMT at the moment:
 
-* Simon [2]
-* Speck [2]
-* Keccak [3]
-* SipHash [4]
-* ChasKey [5]
+* Simon [3]
+* Speck [3]
+* Keccak [4]
+* SipHash [5]
+* ChasKey [6]
 
-Please note that at the moment not all features are available for all ciphers.
+Please note that at the moment not all features are available for all ciphers. A
+detailed description on the application of this tool on the SIMON block ciphers and
+how a differential/linear model for SIMON can be constructed is given in [1].
 
 For information on how to install CryptoSMT and a tutorial on how to use it see 
 the [project website](http://kste.github.io/cryptosmt/).
@@ -28,15 +30,17 @@ the [project website](http://kste.github.io/cryptosmt/).
 References
 ----------
 
-[1] [Towards Finding Optimal Differential Characteristics for ARX: Application to Salsa20](http://eprint.iacr.org/2013/328)
+[1] [Observations on the SIMON block cipher family](http://eprint.iacr.org/2015/145)
 
-[2] [The SIMON and SPECK Families of Lightweight Block Ciphers](http://eprint.iacr.org/2013/404)
+[2] [Towards Finding Optimal Differential Characteristics for ARX: Application to Salsa20](http://eprint.iacr.org/2013/328)
 
-[3] [The Keccak Reference](http://keccak.noekeon.org/Keccak-reference-3.0.pdf)
+[3] [The SIMON and SPECK Families of Lightweight Block Ciphers](http://eprint.iacr.org/2013/404)
 
-[4] [SipHash: a fast short-input PRF](https://131002.net/siphash/)
+[4] [The Keccak Reference](http://keccak.noekeon.org/Keccak-reference-3.0.pdf)
 
-[5] [Chaskey: An Efficient MAC Algorithm for 32-bit Microcontroller](http://eprint.iacr.org/2014/386)
+[5] [SipHash: a fast short-input PRF](https://131002.net/siphash/)
+
+[6] [Chaskey: An Efficient MAC Algorithm for 32-bit Microcontroller](http://eprint.iacr.org/2014/386)
 
 BibTex
 ----------
