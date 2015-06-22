@@ -12,6 +12,7 @@ import subprocess
 import random
 import math
 import os
+import time
 
 from fractions import gcd
 
@@ -27,6 +28,8 @@ def computeProbabilityOfDifferentials(cipher, parameters):
     diff_prob = 0
     characteristics_found = 0
     sat_logfile = "tmp/satlog{}.tmp".format(rnd_string_tmp)
+
+    start_time = time.time()
 
     while weight < MAX_WEIGHT:
         if(os.path.isfile(sat_logfile)):
@@ -72,6 +75,7 @@ def computeProbabilityOfDifferentials(cipher, parameters):
             print "\tSolutions: {}".format(solutions)
             print "\tCharacteristics Found: {}".format(characteristics_found)
             print "\tCurrent Probability: " + str(math.log(diff_prob, 2))
+            print "\tTime: {}s".format(round(time.time() - start_time, 2))
         weight += 1
 
 

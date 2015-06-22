@@ -6,12 +6,13 @@ Created on Mar 28, 2014
 
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, siphash, simonrk,
-                     chaskeymachalf, simonkeyrc)
+                     chaskeymachalf, simonkeyrc, keccakcollision)
 from config import *
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 
 import yaml
+import os
 
 
 def startsearch(tool_parameters):
@@ -28,6 +29,8 @@ def startsearch(tool_parameters):
         cipher = simonlinear.SimonLinearCipher()
     elif tool_parameters["cipher"] == 'keccak':
         cipher = keccak.KeccakCipher()
+    elif tool_parameters["cipher"] == 'keccakcollision':
+        cipher = keccakcollision.KeccakCollisionCipher()
     elif tool_parameters["cipher"] == 'siphash':
         cipher = siphash.SipHashCipher()
     elif tool_parameters["cipher"] == 'simonrk':
@@ -83,6 +86,26 @@ def checkparameters(params):
 
     if not "nummessages" in params:
         params["nummessages"] = 1
+
+    return
+
+def checkenviroment():
+    """
+    Basic checks if the enviroment is set up correctly
+    """
+
+    if not os.path.exists("./tmp/"):
+        os.makedirs("./tmp/")
+
+    if not os.path.exists(PATH_STP):
+        print "ERROR: Could not find STP binary, please check config.py"
+        exit()
+
+    if not os.path.exists(PATH_CRYPTOMINISAT):
+        print "WARNING: Could not find CRYPTOMINISAT binary, please check config.py."
+
+    if not os.path.exists(PATH_BOOLECTOR):
+        print "WARNING: Could not find BOOLECTOR binary, \"--boolector\" option not available."
 
     return
 
@@ -187,7 +210,9 @@ def main():
 
     # Check parameter sanity and set default values
     checkparameters(params)
+    checkenviroment()
 
+    # Start the solver
     startsearch(params)
 
 

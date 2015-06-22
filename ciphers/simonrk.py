@@ -114,7 +114,7 @@ class SimonRkCipher(AbstractCipher):
         """
         Returns a list of the parameters for SIMON.
         """
-        return [wordsize, 1, 8, 2, rounds, weight]
+        return [wordsize, 8, 1, 2, rounds, weight]
 
     def setupSimonRound(self, stp_file, x_in, y_in, key, x_out, y_out, and_out,
                         w, rot_alpha, rot_beta, rot_gamma, wordsize):
@@ -131,34 +131,32 @@ class SimonRkCipher(AbstractCipher):
         x_in_rotalpha = rotl(x_in, rot_alpha, wordsize)
         x_in_rotbeta = rotl(x_in, rot_beta, wordsize)
 
-        #Assert AND Output
-        command += "ASSERT({} = 0hex{});\n".format(
-            stpcommands.getStringForAndDifferential(x_in_rotalpha, x_in_rotbeta,
-                                                    and_out), "f"*(wordsize / 4))
+                #Deal with dependent inputs
+        varibits = "({0} | {1})".format(x_in_rotalpha, x_in_rotbeta)
+        doublebits = self.getDoubleBits(x_in, rot_alpha, rot_beta, wordsize)
 
-        #Deal with dependent inputs
-        rot_dependent = rotl(self.getDependentBitsForAND(x_in, wordsize), 7, wordsize)
-        andout_rotmask = rotr("({0} & {1})".format(and_out, rot_dependent), 7, wordsize)
+        #Check for valid difference
+        firstCheck = "({} & ~{})".format(and_out, varibits)
+        secondCheck = "(BVXOR({}, {}) & {})".format(
+            and_out, rotl(and_out, rot_alpha - rot_beta, wordsize), doublebits)
 
-        command += "ASSERT(BVXOR({0} & {1}, {2}) = 0hex{3});\n".format(
-            and_out, self.getDependentBitsForAND(x_in, wordsize),
-            andout_rotmask, "0"*(wordsize / 4))
+        command += "ASSERT({} | {} = 0x{});\n".format(
+            firstCheck, secondCheck, "0"*(wordsize / 4))
 
         #Assert XORs
         command += "ASSERT({} = BVXOR({}, BVXOR({}, BVXOR({}, {}))));\n".format(
             key, x_out, rotl(x_in, rot_gamma, wordsize), y_in, and_out)
 
         #Weight computation
-        command += "ASSERT({0} = (IF {2} = 0x{4} THEN BVSUB({5},0x{4},0x{6}1) \
-                   ELSE BVXOR(~{1} & ~{2} & {3}, {2}) ENDIF));\n".format(
-                   w, rotr(x_in, 7, wordsize), x_in, rotr(x_in, 14, wordsize),
-                   "f"*(wordsize / 4), wordsize, "0"*((wordsize / 4) - 1))
+        command += "ASSERT({0} = (IF {1} = 0x{4} THEN BVSUB({5},0x{4},0x{6}1) \
+                  ELSE BVXOR({2}, {3}) ENDIF));\n".format(
+                    w, x_in, varibits, doublebits, "f"*(wordsize / 4),
+                    wordsize, "0"*((wordsize / 4) - 1))
         stp_file.write(command)
         return
 
-    def getDependentBitsForAND(self, x_in, wordsize):
-        "rotate_right(diff, 6) & (~rotate_left(diff, 1)) & rotate_left(diff, 8);"
-        command = "({0} & (~{1}) & {2})".format(rotr(x_in, 6, wordsize),
-                                                rotl(x_in, 1, wordsize),
-                                                rotl(x_in, 8, wordsize))
+    def getDoubleBits(self, x_in, rot_alpha, rot_beta, wordsize):
+        command = "({0} & ~{1} & {2})".format(
+            rotl(x_in, rot_beta, wordsize), rotl(x_in, rot_alpha, wordsize),
+            rotl(x_in, 2*rot_alpha - rot_beta, wordsize))
         return command

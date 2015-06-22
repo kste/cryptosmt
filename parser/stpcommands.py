@@ -113,13 +113,16 @@ def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
     Asserts that the weight is equal to the hamming weight of the
     given variables.
     """
+    if(len(variables) == 1):
+        return "ASSERT({} = {});\n".format(weightVariable, variables[0])
+
     command = "ASSERT(({} = BVPLUS(16,".format(weightVariable)
     for var in variables:
         tmp = "0b00000000@(BVPLUS(8, "
         for bit in range(wordsize - ignoreMSBs):
             # Ignore MSBs if they do not contribute to
             # probability of the characteristic.
-            tmp += "0bin0000000@({0}[{1}:{1}]),".format(var, bit, bit)
+            tmp += "0bin0000000@({0}[{1}:{1}]),".format(var, bit)
         command += tmp[:-1] + ")),"
     command = command[:-1]
     command += ")));"
