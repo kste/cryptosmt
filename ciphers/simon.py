@@ -95,7 +95,7 @@ class SimonCipher(AbstractCipher):
         """
         Returns a list of the parameters for SIMON.
         """
-        return [wordsize, 8, 1, 2, rounds, weight]
+        return [wordsize, 5, 0, 1, rounds, weight]
 
     def setupSimonRound(self, stp_file, x_in, y_in, x_out, y_out, and_out, w,
                         rot_alpha, rot_beta, rot_gamma, wordsize):
@@ -120,12 +120,15 @@ class SimonCipher(AbstractCipher):
         doublebits = self.getDoubleBits(x_in, rot_alpha, rot_beta, wordsize)
 
         #Check for valid difference
-        firstCheck = "({} & ~{})".format(and_out, varibits)
-        secondCheck = "(BVXOR({}, {}) & {})".format(
+        firstcheck = "({} & ~{})".format(and_out, varibits)
+        secondcheck = "(BVXOR({}, {}) & {})".format(
             and_out, rotl(and_out, rot_alpha - rot_beta, wordsize), doublebits)
+        thirdcheck = "(IF {0} = 0x{1} THEN BVMOD({2}, {0}, 0x{3}2) ELSE 0x{4} ENDIF)".format(
+            x_in, "f"*(wordsize/4), wordsize, "0"*(wordsize/4 - 1), "0"*(wordsize/4))
 
-        command += "ASSERT({} | {} = 0x{});\n".format(
-            firstCheck, secondCheck, "0"*(wordsize / 4))
+
+        command += "ASSERT(({} | {} | {}) = 0x{});\n".format(
+            firstcheck, secondcheck, thirdcheck, "0"*(wordsize / 4))
 
         #Assert XORs
         command += "ASSERT({} = BVXOR({}, BVXOR({}, {})));\n".format(
@@ -133,9 +136,10 @@ class SimonCipher(AbstractCipher):
 
         #Weight computation
         command += "ASSERT({0} = (IF {1} = 0x{4} THEN BVSUB({5},0x{4},0x{6}1) \
-                  ELSE BVXOR({2}, {3}) ENDIF));\n".format(
-                    w, x_in, varibits, doublebits, "f"*(wordsize / 4),
-                    wordsize, "0"*((wordsize / 4) - 1))
+                    ELSE BVXOR({2}, {3}) ENDIF));\n".format(
+                        w, x_in, varibits, doublebits, "f"*(wordsize / 4),
+                        wordsize, "0"*((wordsize / 4) - 1))
+
 
         stp_file.write(command)
         return

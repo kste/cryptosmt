@@ -169,10 +169,11 @@ def findMinWeightCharacteristic(cipher, parameters):
                                                 parameters["wordsize"]))
     print "---"
 
+    start_time = time.time()
     weight = parameters["sweight"]
 
     while weight < MAX_WEIGHT:
-        print "Weight: {}".format(weight)
+        print "Weight: {} Time: {}s".format(weight, round(time.time() - start_time, 2))
         cipher_params = cipher.getParamList(parameters["rounds"],
                                             parameters["wordsize"],
                                             weight)
@@ -202,9 +203,12 @@ def findMinWeightCharacteristic(cipher, parameters):
 
         # Check if a characteristic was found
         if "Valid" not in result and "unsat" not in result:
-            print("Characteristic for {} - Rounds {} - Wordsize {}- "
-                  "Weight {}".format(cipher.getName(), parameters["rounds"],
-                                     parameters["wordsize"], weight))
+            print("---")
+            print("Characteristic for {} - Rounds {} - Wordsize {} - "
+                  "Weight {} - Time {}s".format(
+                    cipher.getName(), parameters["rounds"],
+                    parameters["wordsize"], weight,
+                    round(time.time() - start_time, 2)))
             characteristic = ""
             if parameters["boolector"]:
                 characteristic = parsesolveroutput.getCharBoolectorOutput(

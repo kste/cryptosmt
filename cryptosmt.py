@@ -6,7 +6,7 @@ Created on Mar 28, 2014
 
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, siphash, simonrk,
-                     chaskeymachalf, simonkeyrc, keccakcollision)
+                     chaskeymachalf, simonkeyrc)
 from config import *
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -29,8 +29,6 @@ def startsearch(tool_parameters):
         cipher = simonlinear.SimonLinearCipher()
     elif tool_parameters["cipher"] == 'keccak':
         cipher = keccak.KeccakCipher()
-    elif tool_parameters["cipher"] == 'keccakcollision':
-        cipher = keccakcollision.KeccakCollisionCipher()
     elif tool_parameters["cipher"] == 'siphash':
         cipher = siphash.SipHashCipher()
     elif tool_parameters["cipher"] == 'simonrk':
