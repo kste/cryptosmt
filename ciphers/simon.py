@@ -95,7 +95,7 @@ class SimonCipher(AbstractCipher):
         """
         Returns a list of the parameters for SIMON.
         """
-        return [wordsize, 5, 0, 1, rounds, weight]
+        return [wordsize, 8, 1, 2, rounds, weight]
 
     def setupSimonRound(self, stp_file, x_in, y_in, x_out, y_out, and_out, w,
                         rot_alpha, rot_beta, rot_gamma, wordsize):
