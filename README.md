@@ -25,7 +25,7 @@ detailed description on the application of this tool on the SIMON block ciphers 
 how a differential/linear model for SIMON can be constructed is given in [1].
 
 For information on how to install CryptoSMT and a tutorial on how to use it see 
-the [project website](http://kste.github.io/cryptosmt/).
+the [project website](http://www2.compute.dtu.dk/~stek/cryptosmt.html).
 
 References
 ----------
