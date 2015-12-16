@@ -20,7 +20,7 @@ def getCharBoolectorOutput(output, char_format, rounds):
             weight = row.split(" ")[1]
         elif re.match(r'\d*\s.*\s.*', row):
             var_name = row.split(" ")[2]
-            var_value = row.split(" ")[1]
+            var_value = "0x" + row.split(" ")[1]
             characteristic[var_name] = var_value
 
     return diffchars.DifferentialCharacteristic(characteristic, char_format,

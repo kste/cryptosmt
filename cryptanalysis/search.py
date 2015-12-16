@@ -175,7 +175,20 @@ def findMinWeightCharacteristic(cipher, parameters):
             else:
                 characteristic = parsesolveroutput.getCharSTPOutput(
                     result, cipher.getFormatString(), parameters["rounds"])
+
             characteristic.printText()
+
+            if parameters["dot"]:
+                with open(parameters["dot"], "w") as dot_file:
+                    dot_file.write("digraph graphname {")
+                    dot_file.write(characteristic.getDOTString())
+                    dot_file.write("}")
+                print("Wrote .dot to {}".format(parameters["dot"]))
+                
+            if parameters["latex"]:
+                with open(parameters["latex"], "w") as tex_file:
+                    tex_file.write(characteristic.getTexString())
+                print("Wrote .tex to {}".format(parameters["latex"]))                
             break
         parameters["sweight"] += 1
     return parameters["sweight"]
@@ -190,7 +203,8 @@ def findAllCharacteristics(cipher, parameters):
     start_time = time.time()
     total_num_characteristics = 0
 
-    while not reachedTimelimit(start_time, parameters["timelimit"]):
+    while not reachedTimelimit(start_time, parameters["timelimit"]) and \
+          parameters["sweight"] != parameters["endweight"]:
         stp_file = "tmp/{}{}.stp".format(cipher.name, rnd_string_tmp)
 
         # Start STP TODO: add boolector support
@@ -210,20 +224,37 @@ def findAllCharacteristics(cipher, parameters):
                                       parameters["wordsize"],
                                       parameters["sweight"])))
 
-            characteristic = parsesolveroutput.getCharSTPOutput(result,
-                                                                cipher.getFormatString(),
-                                                                parameters["rounds"])
+            characteristic = ""
+            if parameters["boolector"]:
+                characteristic = parsesolveroutput.getCharBoolectorOutput(
+                    result, cipher.getFormatString(), parameters["rounds"])
+            else:
+                characteristic = parsesolveroutput.getCharSTPOutput(
+                    result, cipher.getFormatString(), parameters["rounds"])
 
             characteristic.printText()
             parameters["blockedCharacteristics"].append(characteristic)
         else:
-            print("Found {} characteristics with weight {}\n".format(
+            print("Found {} characteristics with weight {}".format(
                 total_num_characteristics, parameters["sweight"]))
-            break
+            parameters["sweight"] += 1
+            total_num_characteristics = 0
+            continue
 
         total_num_characteristics += 1
-    return total_num_characteristics
 
+    if parameters["dot"]:
+        with open(parameters["dot"], "w") as dot_file:
+            dot_file.write("strict digraph graphname {")
+            #dot_file.write("graph [ splines = false ]")
+            dot_graph = ""
+            for characteristic in parameters["blockedCharacteristics"]:
+                dot_graph += characteristic.getDOTString()
+            dot_file.write(dot_graph)
+            dot_file.write("}")
+        print("Wrote .dot to {}".format(parameters["dot"]))
+        
+    return
 
 def searchCharacteristics(cipher, parameters):
     """

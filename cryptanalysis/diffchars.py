@@ -25,17 +25,11 @@ class DifferentialCharacteristic(object):
         self.weight = weight
         return
 
-    def printText(self):
-        '''
-        Prints a table from the data structure.
-        '''
-        header = []
+    def getData(self):
+        """
+        Get the data as a list.
+        """
         data = []
-
-        # Get header
-        for word in self.print_format:
-            header.append(word)
-
         # Get data
         for rnd in range(0, (self.num_rounds + 1) * self.msg_blocks):
             tmp_row = []
@@ -51,6 +45,18 @@ class DifferentialCharacteristic(object):
                     tmp_row.append("none")
             if tmp_row:
                 data.append(tmp_row)
+        return data
+
+    def printText(self):
+        """
+        Prints a table from the data structure.
+        """
+        header = []
+        data = self.getData()
+
+        # Get header
+        for word in self.print_format:
+            header.append(word)
 
         # Print everthing
         col_width = max(len(s) for s in list(itertools.chain.from_iterable(data))) + 2
@@ -73,9 +79,74 @@ class DifferentialCharacteristic(object):
         print("Weight: " + str(int(self.weight, 16)))
         return
 
-    def printLatex(self):
-        '''
-        Prints latex table using booktabs
-        '''
-        print("not implemented yet")
+    def getDOTString(self):
+        """
+        Get the trail in .dot compatible format.
+        """
+        result = ""
+        data = self.getData()
+
+        last_node = ""
+        last_probability = None
+        for idx, entry in enumerate(data):
+            new_node = "rnd{}".format(idx)
+            for value in entry[:-1]: # Last entry should always be weight
+                new_node += str(value)
+
+            # Add label shortended to first two values
+            result += new_node + " [label=\"{},{}\"];\n".format(entry[0], entry[1]) 
+            if last_node != "":
+                # Add edge
+                result += "{} -> {} [label=\"{}\"];\n".format(last_node, new_node, last_probability)
+            last_probability = entry[2]
+            last_node = new_node
+        return result
+
+    def printDOT(self):
+        """
+        Print the trail as a graph in .dot format.
+        """
+        
+        print("digraph graphname {")
+        print(self.getDOTString())
+        print("}")
         return
+
+    def getTexString(self):
+        """
+        Get the trail as a .tex table.
+        """
+        header = ["Round"]
+        data = self.getData()
+
+        # Get header
+        for word in self.print_format:
+            header.append(word)
+
+        result = "\\documentclass{standalone}\n\n"
+        result += "\\usepackage{booktabs}\n\n"
+        result += "\\begin{document}\n"
+        result += "\\begin{tabular}{" + ("c" * (len(header) + 1)) + "}\n"
+        result += "\\toprule\n"
+
+        header_string = ""
+        for label in header:
+            header_string += label + " & "
+        result += header_string[:-2] + "\\\\\n"
+        
+        result += "\\midrule\n"
+
+        for idx, entry in enumerate(data):
+            tmp_row = "${}$ & ".format(idx)
+            for value in entry:
+                tmp_row += "\\texttt{" + str(value) + "} & "
+            result += tmp_row[:-2] + "\\\\\n"
+
+        result += "\\bottomrule\n"
+        result += "\\end{tabular}\n"
+        result += "\\end{document}\n"
+
+
+
+
+        return result

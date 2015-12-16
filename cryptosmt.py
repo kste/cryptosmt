@@ -84,8 +84,11 @@ def loadparameters(args):
               "mode" : 0,
               "wordsize" : 16,
               "sweight" : 0,
+              "endweight" : 1000,
               "iterative" : False,
               "boolector" : False,
+              "dot" : None,
+              "latex" : None,
               "nummessages" : 1,
               "timelimit" : -1,
               "fixedVariables" : {},
@@ -116,6 +119,9 @@ def loadparameters(args):
     if args.sweight:
         params["sweight"] = args.sweight[0]
 
+    if args.endweight:
+        params["endweight"] = args.endweight[0]
+
     if args.mode:
         params["mode"] = args.mode[0]
 
@@ -130,6 +136,12 @@ def loadparameters(args):
 
     if args.nummessages:
         params["nummessages"] = args.nummessages[0]
+
+    if args.dot:
+        params["dot"] = args.dot[0]
+
+    if args.latex:
+        params["latex"] = args.latex[0]
 
     return params
 
@@ -147,13 +159,16 @@ def main():
     parser.add_argument('--cipher', nargs=1, help="Options: simon, speck, ...")
     parser.add_argument('--sweight', nargs=1, type=int,
                         help="Starting weight for the trail search.")
+    parser.add_argument('--endweight', nargs=1, type=int,
+                        help="Stop search after reaching endweight.")    
     parser.add_argument('--rounds', nargs=1, type=int,
                         help="The number of rounds for the cipher")
     parser.add_argument('--wordsize', nargs=1, type=int,
                         help="Wordsize used for the cipher.")
     parser.add_argument('--nummessages', nargs=1, type=int,
                         help="Number of message blocks.")
-    parser.add_argument('--mode', nargs=1, type=int, help=
+    parser.add_argument('--mode', nargs=1, type=int, 
+                        choices=[0, 1, 2, 3, 4], help=
                         "0 = search characteristic for fixed round\n"
                         "1 = search characteristic for all rounds starting at"
                         "the round specified\n"
@@ -168,6 +183,8 @@ def main():
                         help="Use boolector to find solutions")
     parser.add_argument('--inputfile', nargs=1, help="Use an yaml input file to"
                                                      "read the parameters.")
+    parser.add_argument('--dot', nargs=1, help="Print the trail in .dot format.")
+    parser.add_argument('--latex', nargs=1, help="Print the trail in .tex format.")
 
     # Parse command line arguments and construct parameter list.
     args = parser.parse_args()

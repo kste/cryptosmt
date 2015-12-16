@@ -15,6 +15,8 @@ class KeccakCipher(AbstractCipher):
     Represents the Keccak hash function and can be used to find preimages.
     """
 
+    name = "keccak"
+
     RO = [[0,  36,  3, 41, 18],
           [1,  44, 10, 45,  2],
           [62,  6, 43, 15, 61],
@@ -23,12 +25,6 @@ class KeccakCipher(AbstractCipher):
 
     RC = ["0hex0001", "0hex8082", "0hex808A", "0hex8000", "0hex808B",
           "0hex0001", "0hex8081", "0hex8009"]
-
-    def getName(self):
-        """
-        Returns the name of the cipher.
-        """
-        return "Keccak"
 
     def getFormatString(self):
         return ['s00', 's10', 's20', 's30', 's40',

@@ -16,19 +16,14 @@ class ChasKeyMacHalf(AbstractCipher):
     Represents the differential behaviour of the ChasKeyMAC and can be used
     to find differential characteristics for the given parameters.
     """
+    name ="chaskeyhalf"
     num_messages = 1
-
-    def getName(self):
-        """
-        Returns the name of the cipher.
-        """
-        return "chaskeyhalf"
 
     def getFormatString(self):
         """
         Returns the print format.
         """
-        return ['v0', 'v1', 'v2', 'v3', 'w0', 'w1', 'w2', 'w3', 'weight']
+        return ['v0', 'v1', 'v2', 'v3', 'w0', 'w1', 'weight']
 
     def createSTP(self, stp_filename, parameters):
         """
