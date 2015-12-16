@@ -16,30 +16,25 @@ class SipHashCipher(AbstractCipher):
     Represents the differential behaviour of SipHash and can be used
     to find differential characteristics for the given parameters.
     """
-    num_messages = 1
 
-    def getName(self):
-        """
-        Returns the name of the cipher.
-        """
-        return "siphash"
+    name = "siphash"
+    num_messages = 1
 
     def getFormatString(self):
         return ['m', 'v0', 'v1', 'v2', 'v3', 'a0', 'a1', 'a2', 'a3',
                 'w0', 'w1', 'w2', 'w3', 'weight']
 
-    def createSTP(self, stp_filename, cipherParameters):
+    def createSTP(self, stp_filename, parameters):
         """
         Creates an STP file to find a characteristic for SipHash with
         the given parameters.
         """
-        wordsize = cipherParameters[0]
-        rounds = cipherParameters[1]
-        weight = cipherParameters[2]
-        #is_iterative = cipherParameters[3]
-        fixed_vars = cipherParameters[4]
-        chars_blocked = cipherParameters[5]
-        self.num_messages = cipherParameters[6]
+
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        weight = parameters["sweight"]
+        
+        self.num_messages = parameters["nummessages"]
 
         with open(stp_filename, 'w') as stp_file:
             stp_file.write("% Input File for STP\n% Siphash w={} "
@@ -139,13 +134,11 @@ class SipHashCipher(AbstractCipher):
 
             # stpcommands.assertNonZero(stp_file, v0 + v1 + v2 + v3, wordsize)
 
-            if fixed_vars:
-                for key, value in fixed_vars.iteritems():
-                    stpcommands.assertVariableValue(stp_file, key, value)
+            for key, value in parameters["fixedVariables"].items():
+                stpcommands.assertVariableValue(stp_file, key, value)
 
-            if chars_blocked:
-                for char in chars_blocked:
-                    stpcommands.blockCharacteristic(stp_file, char, wordsize)
+            for char in parameters["blockedCharacteristics"]:
+                stpcommands.blockCharacteristic(stp_file, char, wordsize)
 
             stpcommands.setupQuery(stp_file)
 
@@ -258,20 +251,20 @@ class SipHashCipher(AbstractCipher):
         # Lipmaa and Moriai
         command += "ASSERT({0} = ~".format(w0)
         command += stpcommands.getStringEq(
-            v1_in, v0_in, rotr(a0, 32, wordsize), wordsize)
+            v1_in, v0_in, rotr(a0, 32, wordsize))
         command += ");\n"
 
         command += "ASSERT({0} = ~".format(w1)
-        command += stpcommands.getStringEq(v2_in, v3_in, a2, wordsize)
+        command += stpcommands.getStringEq(v2_in, v3_in, a2)
         command += ");\n"
 
         command += "ASSERT({0} = ~".format(w2)
-        command += stpcommands.getStringEq(a0, a3, v0_out, wordsize)
+        command += stpcommands.getStringEq(a0, a3, v0_out)
         command += ");\n"
 
         command += "ASSERT({0} = ~".format(w3)
         command += stpcommands.getStringEq(
-            a2, a1, rotr(v2_out, 32, wordsize), wordsize)
+            a2, a1, rotr(v2_out, 32, wordsize))
         command += ");\n"
 
         return command

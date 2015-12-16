@@ -1,1 +1,1 @@
-import simon, speck
+from . import simon, speck

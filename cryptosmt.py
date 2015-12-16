@@ -7,7 +7,7 @@ Created on Mar 28, 2014
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, siphash, simonrk,
                      chaskeymachalf, simonkeyrc)
-from config import *
+from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 
@@ -20,25 +20,21 @@ def startsearch(tool_parameters):
     Starts the search tool for the given parameters
     """
 
-    # Select Cipher Cipher
-    if tool_parameters["cipher"] == 'simon':
-        cipher = simon.SimonCipher()
-    elif tool_parameters["cipher"] == 'speck':
-        cipher = speck.SpeckCipher()
-    elif tool_parameters["cipher"] == 'simonlinear':
-        cipher = simonlinear.SimonLinearCipher()
-    elif tool_parameters["cipher"] == 'keccak':
-        cipher = keccak.KeccakCipher()
-    elif tool_parameters["cipher"] == 'siphash':
-        cipher = siphash.SipHashCipher()
-    elif tool_parameters["cipher"] == 'simonrk':
-        cipher = simonrk.SimonRkCipher()
-    elif tool_parameters["cipher"] == 'simonkeyrc':
-        cipher = simonkeyrc.SimonKeyRcCipher()
-    elif tool_parameters["cipher"] == 'chaskeyhalf':
-        cipher = chaskeymachalf.ChasKeyMacHalf()
+    cipher_suite = {"simon" : simon.SimonCipher(),
+                    "speck" : speck.SpeckCipher(),
+                    "simonlinear" : simonlinear.SimonLinearCipher(),
+                    "keccak" : keccak.KeccakCipher(),
+                    "siphash" : siphash.SipHashCipher(),
+                    "simonrk" : simonrk.SimonRkCipher(),
+                    "simonkeyrc" : simonkeyrc.SimonKeyRcCipher(),
+                    "chaskeyhalf" : chaskeymachalf.ChasKeyMacHalf()}
+
+    cipher = None
+
+    if tool_parameters["cipher"] in cipher_suite:
+        cipher = cipher_suite[tool_parameters["cipher"]]
     else:
-        print "Cipher not supported!"
+        print("Cipher not supported!")
         return
 
     # Handle program flow
@@ -55,38 +51,6 @@ def startsearch(tool_parameters):
 
     return
 
-
-def checkparameters(params):
-    """
-    Checks the parameters and sets default values if no
-    value was given.
-    """
-    if not "iterative" in params:
-        params["iterative"] = False
-
-    if not "fixedVariables" in params:
-        params["fixedVariables"] = None
-
-    if not "sweight" in params:
-        params["sweight"] = 0
-
-    if not "rounds" in params:
-        params["rounds"] = 5
-
-    if not "mode" in params:
-        params["mode"] = 0
-
-    if not "wordsize" in params:
-        params["wordsize"] = 16
-
-    if not "boolector" in params:
-        params["boolector"] = False
-
-    if not "nummessages" in params:
-        params["nummessages"] = 1
-
-    return
-
 def checkenviroment():
     """
     Basic checks if the enviroment is set up correctly
@@ -96,14 +60,16 @@ def checkenviroment():
         os.makedirs("./tmp/")
 
     if not os.path.exists(PATH_STP):
-        print "ERROR: Could not find STP binary, please check config.py"
+        print("ERROR: Could not find STP binary, please check config.py")
         exit()
 
     if not os.path.exists(PATH_CRYPTOMINISAT):
-        print "WARNING: Could not find CRYPTOMINISAT binary, please check config.py."
+        print("WARNING: Could not find CRYPTOMINISAT binary, please check "
+              "config.py.")
 
     if not os.path.exists(PATH_BOOLECTOR):
-        print "WARNING: Could not find BOOLECTOR binary, \"--boolector\" option not available."
+        print("WARNING: Could not find BOOLECTOR binary, \"--boolector\" "
+              "option not available.")
 
     return
 
@@ -112,33 +78,29 @@ def loadparameters(args):
     """
     Get parameters from the argument list and inputfile.
     """
-    params = {}
+    # Load default values
+    params = {"cipher" : "simon",
+              "rounds" : 5,
+              "mode" : 0,
+              "wordsize" : 16,
+              "sweight" : 0,
+              "iterative" : False,
+              "boolector" : False,
+              "nummessages" : 1,
+              "timelimit" : -1,
+              "fixedVariables" : {},
+              "blockedCharacteristics" : []}
+
     # Check if there is an input file specified
     if args.inputfile:
         with open(args.inputfile[0], 'r') as input_file:
             doc = yaml.load(input_file)
-            if "rounds" in doc:
-                params["rounds"] = doc["rounds"]
-            if "cipher" in doc:
-                params["cipher"] = doc["cipher"]
-            if "wordsize" in doc:
-                params["wordsize"] = doc["wordsize"]
-            if "msgblocks" in doc:
-                params["msgblocks"] = doc["msgblocks"]
-            if "mode" in doc:
-                params["mode"] = doc["mode"]
-            if "iterative" in doc:
-                params["iterative"] = doc["iterative"]
-            if "sweight" in doc:
-                params["sweight"] = doc["sweight"]
-            if "nummessages" in doc:
-                params["nummessages"] = doc["nummessages"]
-            if "boolector" in doc:
-                params["boolector"] = doc["boolector"]
+            params.update(doc)
             if "fixedVariables" in doc:
                 fixed_vars = {}
                 for variable in doc["fixedVariables"]:
-                    fixed_vars = dict(fixed_vars.items() + variable.items())
+                    fixed_vars = dict(list(fixed_vars.items()) +
+                                      list(variable.items()))
                 params["fixedVariables"] = fixed_vars
 
     # Override parameters if they are set on commandline
@@ -146,16 +108,19 @@ def loadparameters(args):
         params["cipher"] = args.cipher[0]
 
     if args.rounds:
-        params["rounds"] = int(args.rounds[0])
+        params["rounds"] = args.rounds[0]
 
     if args.wordsize:
-        params["wordsize"] = int(args.wordsize[0])
+        params["wordsize"] = args.wordsize[0]
 
     if args.sweight:
-        params["sweight"] = int(args.sweight[0])
+        params["sweight"] = args.sweight[0]
 
     if args.mode:
-        params["mode"] = int(args.mode[0])
+        params["mode"] = args.mode[0]
+
+    if args.timelimit:
+        params["timelimit"] = args.timelimit[0]
 
     if args.iterative:
         params["iterative"] = args.iterative
@@ -164,7 +129,7 @@ def loadparameters(args):
         params["boolector"] = args.boolector
 
     if args.nummessages:
-        params["nummessages"] = int(args.nummessages[0])
+        params["nummessages"] = args.nummessages[0]
 
     return params
 
@@ -175,26 +140,28 @@ def main():
     parameters.
     """
     parser = ArgumentParser(description="This tool finds the best differential"
-                                        "characteristics for a specific hamming"
-                                        "weight using STP and CryptoMiniSat.",
+                                        "trail in a cryptopgrahic primitive"
+                                        "using STP and CryptoMiniSat.",
                             formatter_class=RawTextHelpFormatter)
 
     parser.add_argument('--cipher', nargs=1, help="Options: simon, speck, ...")
-    parser.add_argument('--sweight', nargs=1, help="Hamming weight of the"
-                                                   "characteristic to search")
-    parser.add_argument('--rounds', nargs=1, help="The number of rounds for"
-                                                  "the cipher")
-    parser.add_argument('--wordsize', nargs=1, help="Wordsize used for the"
-                                                    "cipher.")
-    parser.add_argument('--nummessages', nargs=1,
+    parser.add_argument('--sweight', nargs=1, type=int,
+                        help="Starting weight for the trail search.")
+    parser.add_argument('--rounds', nargs=1, type=int,
+                        help="The number of rounds for the cipher")
+    parser.add_argument('--wordsize', nargs=1, type=int,
+                        help="Wordsize used for the cipher.")
+    parser.add_argument('--nummessages', nargs=1, type=int,
                         help="Number of message blocks.")
-    parser.add_argument('--mode', nargs=1, help=
+    parser.add_argument('--mode', nargs=1, type=int, help=
                         "0 = search characteristic for fixed round\n"
                         "1 = search characteristic for all rounds starting at"
                         "the round specified\n"
                         "2 = search all characteristic for a specific weight\n"
                         "3 = used for key recovery\n"
                         "4 = determine the probability of the differential\n")
+    parser.add_argument('--timelimit', nargs=1, type=int,
+                        help="Set a timelimit for the search in seconds.")
     parser.add_argument('--iterative', action="store_true",
                         help="Only search for iterative characteristics")
     parser.add_argument('--boolector', action="store_true",
@@ -202,12 +169,11 @@ def main():
     parser.add_argument('--inputfile', nargs=1, help="Use an yaml input file to"
                                                      "read the parameters.")
 
-    # Parse command line arguments and construct parameter list
+    # Parse command line arguments and construct parameter list.
     args = parser.parse_args()
     params = loadparameters(args)
 
-    # Check parameter sanity and set default values
-    checkparameters(params)
+    # Check if enviroment is setup correctly.
     checkenviroment()
 
     # Start the solver

@@ -13,8 +13,8 @@ from parser.stpcommands import getStringRightRotate as rotr
 
 class ChasKeyMacHalf(AbstractCipher):
     """
-    Represents the ChasKey MAC and can be used
-    to find recover a secret key from plaintext/ciphertexts.
+    Represents the differential behaviour of the ChasKeyMAC and can be used
+    to find differential characteristics for the given parameters.
     """
     num_messages = 1
 
@@ -30,18 +30,16 @@ class ChasKeyMacHalf(AbstractCipher):
         """
         return ['v0', 'v1', 'v2', 'v3', 'w0', 'w1', 'w2', 'w3', 'weight']
 
-    def createSTP(self, stp_filename, cipherParameters):
+    def createSTP(self, stp_filename, parameters):
         """
         Creates an STP file to find a characteristic for ChasKey
         with the given parameters.
         """
-        wordsize = cipherParameters[0]
-        rounds = cipherParameters[1]
-        weight = cipherParameters[2]
-        is_iterative = cipherParameters[3]
-        fixed_vars = cipherParameters[4]
-        chars_blocked = cipherParameters[5]
-        self.num_messages = cipherParameters[6]
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        weight = parameters["sweight"]
+
+        self.num_messages = parameters["nummessages"]
 
         with open(stp_filename, 'w') as stp_file:
             stp_file.write("% Input File for STP\n% ChasKeyMac w={} rounds={}"
@@ -84,21 +82,11 @@ class ChasKeyMacHalf(AbstractCipher):
             # stpcommands.assertVariableValue(stp_file, v2[rounds], zeroString)
             # stpcommands.assertVariableValue(stp_file, v3[rounds], zeroString)
 
-            # Iterative characteristics only
-            # Input difference = Output difference
-            if is_iterative:
-                stpcommands.assertVariableValue(stp_file, v0[0], v0[rounds])
-                stpcommands.assertVariableValue(stp_file, v1[0], v1[rounds])
-                stpcommands.assertVariableValue(stp_file, v2[0], v2[rounds])
-                stpcommands.assertVariableValue(stp_file, v3[0], v3[rounds])
+            for key, value in parameters["fixedVariables"].items():
+                stpcommands.assertVariableValue(stp_file, key, value)
 
-            if fixed_vars:
-                for key, value in fixed_vars.iteritems():
-                    stpcommands.assertVariableValue(stp_file, key, value)
-
-            if chars_blocked:
-                for char in chars_blocked:
-                    stpcommands.blockCharacteristic(stp_file, char, wordsize)
+            for char in parameters["blockedCharacteristics"]:
+                stpcommands.blockCharacteristic(stp_file, char, wordsize)
 
             stpcommands.setupQuery(stp_file)
 
@@ -118,11 +106,11 @@ class ChasKeyMacHalf(AbstractCipher):
         command = ""
 
         if (rnd % 2) == 0:
-            rotOne = 5
-            rotTwo = 8
+            rot_one = 5
+            rot_two = 8
         else:
-            rotOne = 7
-            rotTwo = 13
+            rot_one = 7
+            rot_two = 13
 
         #Assert intermediate values
         #Rotate right to get correct output value
@@ -134,7 +122,7 @@ class ChasKeyMacHalf(AbstractCipher):
 
         #v1_out
         command += "ASSERT({} = BVXOR({}, {}));\n".format(
-            v1_out, rotl(v1_in, rotOne, wordsize), rotr(v2_out, 16, wordsize))
+            v1_out, rotl(v1_in, rot_one, wordsize), rotr(v2_out, 16, wordsize))
 
         #v2_out
         command += "ASSERT("
@@ -144,25 +132,19 @@ class ChasKeyMacHalf(AbstractCipher):
 
         #v3_out
         command += "ASSERT({} = BVXOR({}, {}));\n".format(
-            v3_out, rotl(v3_in, rotTwo, wordsize), v0_out)
+            v3_out, rotl(v3_in, rot_two, wordsize), v0_out)
 
         # Compute Weights for modular addition
         # Lipmaa and Moriai
 
         command += "ASSERT({0} = ~".format(w0)
         command += stpcommands.getStringEq(
-            v1_in, v0_in, rotr(v2_out, 16, wordsize), wordsize)
+            v1_in, v0_in, rotr(v2_out, 16, wordsize))
         command += ");\n"
 
         command += "ASSERT({0} = ~".format(w1)
-        command += stpcommands.getStringEq(v2_in, v3_in, v0_out, wordsize)
+        command += stpcommands.getStringEq(v2_in, v3_in, v0_out)
         command += ");\n"
 
         stp_file.write(command)
         return
-
-    def getParamList(self, rounds, wordsize, weight):
-        """
-        Returns a list of the parameters for ChasKey.
-        """
-        return [wordsize, rounds, weight]

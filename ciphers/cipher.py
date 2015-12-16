@@ -7,11 +7,10 @@ Created on Mar 25, 2014
 from abc import ABCMeta, abstractmethod
 
 
-class AbstractCipher(object):
+class AbstractCipher(object, metaclass=ABCMeta):
     """
     Abstract Class for Ciphers
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def createSTP(self, filename, cipherParameters):

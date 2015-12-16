@@ -13,18 +13,18 @@ def blockCharacteristic(stpfile, characteristic, wordsize):
     # Only add state words (x, y)
     # TODO: extend for other ciphers
     filtered_words = {var_name: var_value for var_name, var_value in
-                      characteristic.characteristic_data.iteritems()
+                      characteristic.characteristic_data.items()
                       if var_name.startswith('x') or
                       var_name.startswith('y') or
                       var_name.startswith('v')}
 
     blockingStatement = "ASSERT(NOT("
 
-    for key, value in filtered_words.iteritems():
+    for key, value in filtered_words.items():
         blockingStatement += "BVXOR({}, {}) | ".format(key, value)
 
     blockingStatement = blockingStatement[:-2]
-    blockingStatement += ") = 0hex{});".format("0"*(wordsize / 4))
+    blockingStatement += ") = 0hex{});".format("0"*(wordsize // 4))
     stpfile.write(blockingStatement)
     return
 
@@ -83,7 +83,7 @@ def getStringForNonZero(variables, wordsize):
         command += var + "|"
 
     command = command[:-1]
-    command += ") = 0hex{}));".format("0"*(wordsize / 4))
+    command += ") = 0hex{}));".format("0" * (wordsize // 4))
     return command
 
 
@@ -113,7 +113,7 @@ def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
     Asserts that the weight is equal to the hamming weight of the
     given variables.
     """
-    if(len(variables) == 1):
+    if len(variables) == 1:
         return "ASSERT({} = {});\n".format(weightVariable, variables[0])
 
     command = "ASSERT(({} = BVPLUS(16,".format(weightVariable)
@@ -130,7 +130,7 @@ def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
     return command
 
 
-def getStringEq(a, b, c, wordsize):
+def getStringEq(a, b, c):
     command = "(BVXOR(~{0}, {1}) & BVXOR(~{0}, {2}))".format(a, b, c)
     return command
 
@@ -142,7 +142,7 @@ def getStringAdd(a, b, c, wordsize):
         a, b, c, wordsize - 1)
     command += " & BVXOR({0}, BVXOR({1}, BVXOR({2}, ({1} << 1)[{3}:0]))))".format(
         a, b, c, wordsize - 1)
-    command += " = 0hex{})".format("0"*(wordsize / 4))
+    command += " = 0hex{})".format("0" * (wordsize // 4))
     return command
 
 

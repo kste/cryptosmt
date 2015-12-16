@@ -17,17 +17,17 @@ class SimonKeyRcCipher(AbstractCipher):
     to find recover a secret key from plaintext/ciphertexts.
     """
 
+    name = "simonkeyrc"
+    rot_alpha = 8
+    rot_beta = 1
+    rot_gamma = 2
     CONST_Z = [1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0,
                0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0,
                1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0]
 
     num_messages = 1
 
-    def getName(self):
-        """
-        Returns the name of the cipher.
-        """
-        return "simon"
+
 
     def getFormatString(self):
         """
@@ -43,26 +43,31 @@ class SimonKeyRcCipher(AbstractCipher):
 
         return format_string
 
-    def createSTP(self, stp_filename, cipherParameters):
+    def createSTP(self, stp_filename, parameters):
         """
         Creates an STP file for SIMON.
         """
 
-        wordsize = cipherParameters[0]
-        rot_alpha = cipherParameters[1]
-        rot_beta = cipherParameters[2]
-        rot_gamma = cipherParameters[3]
-        rounds = cipherParameters[4]
-        #weight = cipherParameters[5]
-        #is_iterative = cipherParameters[6]
-        fixed_vars = cipherParameters[7]
-        chars_blocked = cipherParameters[8]
-        self.num_messages = cipherParameters[9]
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        weight = parameters["sweight"]
+
+        # Replace with custom if set in parameters.
+        if "rotationconstants" in parameters:
+            self.rot_alpha = parameters["rotationconstants"][0] 
+            self.rot_beta = parameters["rotationconstants"][1]
+            self.rot_gamma = parameters["rotationconstants"][2]
+
+        self.num_messages = parameters["nummessages"]
 
         with open(stp_filename, 'w') as stp_file:
-            stp_file.write("% Input File for STP\n% Simon w={} alpha={} beta={} gamma={}"
-                           " rounds={}\n\n\n".format(wordsize, rot_alpha, rot_beta,
-                                                     rot_gamma, rounds))
+            header = ("% Input File for STP\n% Simon w={} alpha={} beta={}"
+                      " gamma={} rounds={}\n\n\n".format(wordsize,
+                                                         self.rot_alpha,
+                                                         self.rot_beta,
+                                                         self.rot_gamma,
+                                                         rounds))
+            stp_file.write(header)
 
             # Setup key
             key = ["key{}".format(i) for i in range(rounds + 1)]
@@ -103,30 +108,22 @@ class SimonKeyRcCipher(AbstractCipher):
                         delta_y[i], "y0r{}".format(i),
                         "y{}r{}".format(msg, i)))
 
-            if fixed_vars:
-                for key, value in fixed_vars.iteritems():
-                    stpcommands.assertVariableValue(stp_file, key, value)
+            for key, value in parameters["fixedVariables"].items():
+                stpcommands.assertVariableValue(stp_file, key, value)
 
-            if chars_blocked:
-                for char in chars_blocked:
-                    stpcommands.blockCharacteristic(stp_file, char, wordsize)
+            for char in parameters["blockedCharacteristics"]:
+                stpcommands.blockCharacteristic(stp_file, char, wordsize)
 
             stpcommands.setupQuery(stp_file)
 
         return
 
-    def getParamList(self, rounds, wordsize, weight):
-        """
-        Returns a list of the parameters for SIMON.
-        """
-        return [wordsize, 1, 8, 2, rounds, weight]
-
     def setupKeySchedule(self, stp_file, key, tmp_key, rounds, wordsize):
         command = ""
-        const3 = "0x{}3".format("0"*(wordsize / 4 - 1))
-        if(rounds > 4):
+        const3 = "0x{}3".format("0"*(wordsize // 4 - 1))
+        if rounds > 4:
             for i in range(4, rounds):
-                constz = "0x{}{}".format("0"*(wordsize / 4 - 1),
+                constz = "0x{}{}".format("0"*(wordsize // 4 - 1),
                                          self.CONST_Z[(i - 4) % 62])
                 tmp = "BVXOR({}, {})".format(rotr(key[i-1], 3, wordsize), key[i-3])
                 command += "ASSERT({} = BVXOR({}, {}));\n".format(
@@ -149,11 +146,12 @@ class SimonKeyRcCipher(AbstractCipher):
         command += "ASSERT({} = {});\n".format(y0_out, x0_in)
 
         #Assert AND Output
-        command += "ASSERT({} = {} & {});\n".format(
-            and_out0, rotl(x0_in, 1, wordsize), rotl(x0_in, 8, wordsize))
+        command += "ASSERT({} = {} & {});\n".format(and_out0, 
+            rotl(x0_in, self.rot_beta, wordsize), 
+            rotl(x0_in, self.rot_alpha, wordsize))
 
         #Assert x_out
         command += "ASSERT({} = BVXOR({}, BVXOR({}, BVXOR({}, {}))));\n".format(
-            x0_out, y0_in, and_out0, key, rotl(x0_in, 2, wordsize))
+            x0_out, y0_in, and_out0, key, rotl(x0_in, self.rot_gamma, wordsize))
         stp_file.write(command)
         return

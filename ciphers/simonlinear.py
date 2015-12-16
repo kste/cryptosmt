@@ -4,8 +4,6 @@ Created on Mar 28, 2014
 @author: stefan
 '''
 
-import time
-
 from parser import stpcommands
 from ciphers.cipher import AbstractCipher
 
@@ -19,11 +17,10 @@ class SimonLinearCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    def getName(self):
-        """
-        Returns the name of the cipher.
-        """
-        return "simonlinear"
+    name = "simonlinear"
+    rot_alpha = 8
+    rot_beta = 1
+    rot_gamma = 2
 
     def getFormatString(self):
         """
@@ -31,26 +28,30 @@ class SimonLinearCipher(AbstractCipher):
         """
         return ['x', 'y', 'w']
 
-    def createSTP(self, stp_filename, cipherParameters):
+    def createSTP(self, stp_filename, parameters):
         """
         Creates an STP file to find a linear characteristic for SIMON with
         the given parameters.
         """
 
-        wordsize = cipherParameters[0]
-        rot_alpha = cipherParameters[1]
-        rot_beta = cipherParameters[2]
-        rot_gamma = cipherParameters[3]
-        rounds = cipherParameters[4]
-        weight = cipherParameters[5]
-        isIterative = cipherParameters[6]
-        varsFixed = cipherParameters[7]
-        blockedCharacteristics = cipherParameters[8]
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        weight = parameters["sweight"]
+
+        # Replace with custom if set in parameters.
+        if "rotationconstants" in parameters:
+            self.rot_alpha = parameters["rotationconstants"][0] 
+            self.rot_beta = parameters["rotationconstants"][1]
+            self.rot_gamma = parameters["rotationconstants"][2]
 
         with open(stp_filename, 'w') as stp_file:
-            stp_file.write("% Input File for STP\n% SimonLinear w={} alpha={} "
-                           "beta={} gamma={} rounds={}\n\n\n".format(
-                            wordsize, rot_alpha, rot_beta, rot_gamma, rounds))
+            header = ("% Input File for STP\n% Simon w={} alpha={} beta={}"
+                      " gamma={} rounds={}\n\n\n".format(wordsize,
+                                                         self.rot_alpha,
+                                                         self.rot_beta,
+                                                         self.rot_gamma,
+                                                         rounds))
+            stp_file.write(header)
 
             # Setup variable
             # x = left, y = right
@@ -62,11 +63,14 @@ class SimonLinearCipher(AbstractCipher):
             abits = ["abits{}".format(i) for i in range(rounds + 1)]
 
             #Create tmp variables for weight computation
-            tmpWeight = ["tmp{}r{}".format(j, i) for i in range(rounds) for j in range(wordsize)]
+            tmpWeight = ["tmp{}r{}".format(j, i) for i in range(rounds) 
+                         for j in range(wordsize)]
 
             #Tmp variables for parity checks
-            sbits = ["sbits{}r{}".format(j, i) for i in range(rounds) for j in range(wordsize)]
-            pbits = ["pbits{}r{}".format(j, i) for i in range(rounds) for j in range(wordsize)]
+            sbits = ["sbits{}r{}".format(j, i) for i in range(rounds) 
+                     for j in range(wordsize)]
+            pbits = ["pbits{}r{}".format(j, i) for i in range(rounds) 
+                     for j in range(wordsize)]
 
             # w = weight
             w = ["w{}".format(i) for i in range(rounds)]
@@ -87,44 +91,34 @@ class SimonLinearCipher(AbstractCipher):
             for i in range(rounds):
                 indicesFrom = i*wordsize
                 indicesTo = (i+1)*wordsize
-                self.setupSimonRound(stp_file, x[i], y[i], x[i+1], y[i+1], and_out[i],
-                                     b[i], c[i], abits[i], w[i],
+                self.setupSimonRound(stp_file, x[i], y[i], x[i+1], y[i+1], 
+                                     and_out[i], b[i], c[i], abits[i], w[i],
                                      tmpWeight[indicesFrom:indicesTo],
                                      sbits[indicesFrom:indicesTo],
                                      pbits[indicesFrom:indicesTo],
-                                     rot_alpha, rot_beta, rot_gamma, wordsize)
+                                     wordsize)
 
             # No all zero characteristic
             stpcommands.assertNonZero(stp_file, x + y, wordsize)
 
             # Iterative characteristics only
             # Input difference = Output difference
-            if isIterative:
+            if parameters["iterative"]:
                 stpcommands.assertVariableValue(stp_file, x[0], x[rounds])
                 stpcommands.assertVariableValue(stp_file, y[0], y[rounds])
 
-            if varsFixed:
-                for key, value in varsFixed.iteritems():
-                    stpcommands.assertVariableValue(stp_file, key, value)
+            for key, value in parameters["fixedVariables"].items():
+                stpcommands.assertVariableValue(stp_file, key, value)
 
-            if blockedCharacteristics:
-                for char in blockedCharacteristics:
-                    stpcommands.blockCharacteristic(stp_file, char, wordsize)
+            for char in parameters["blockedCharacteristics"]:
+                stpcommands.blockCharacteristic(stp_file, char, wordsize)
 
             stpcommands.setupQuery(stp_file)
 
         return
 
-    def getParamList(self, rounds, wordsize, weight):
-        """
-        Returns a list of the parameters for SIMON.
-        """
-        return [wordsize, 8, 1, 2, rounds, weight]
-
-
     def setupSimonRound(self, stp_file, x_in, y_in, x_out, y_out, and_out, b, c,
-                        abits, w, tmpWeight, sbits, pbits, rot_alpha, rot_beta,
-                        rot_gamma, wordsize):
+                        abits, w, tmpWeight, sbits, pbits, wordsize):
         """
         Model for linear behaviour of one round SIMON.
         y[i+1] = x[i]
@@ -135,28 +129,28 @@ class SimonLinearCipher(AbstractCipher):
         """
         command = ""
 
-        deltarot = rot_alpha - rot_beta
+        deltarot = self.rot_alpha - self.rot_beta
         lout = y_in
-        lin = "BVXOR(BVXOR({}, {}), {})".format(x_in, rotr(lout, rot_gamma, wordsize), y_out)
-        #lin = "BVXOR({}, {})".format(x_in, rotr(lout, rot_gamma, wordsize))
+        lin = "BVXOR(BVXOR({}, {}), {})".format(x_in, rotr(lout, self.rot_gamma, wordsize), y_out)
+        #lin = "BVXOR({}, {})".format(x_in, rotr(lout, self.rot_gamma, wordsize))
 
         #Assert(y_out = x_in)
         command += "ASSERT({} = {});\n".format(x_out, y_in)
 
         #Assert for AND linear approximation
         tmp = "BVXOR(({0} | {1}), {2}) & {2}".format(
-            rotr(lout, rot_alpha, wordsize),
-            rotr(lout, rot_beta, wordsize),
+            rotr(lout, self.rot_alpha, wordsize),
+            rotr(lout, self.rot_beta, wordsize),
             lin)
 
-        command += "ASSERT({} = 0x{});\n".format(tmp, "0"*(wordsize / 4))
+        command += "ASSERT({} = 0x{});\n".format(tmp, "0"*(wordsize // 4))
 
         #Assert for y_out
         # command += "ASSERT({0} = BVXOR({1}, BVXOR({2}, BVXOR({3}, {4}))));\n".format(
-        #     y_out, x_in, rotr(lout, rot_alpha, wordsize), rotr(lout, rot_beta, wordsize),
-        #     rotr(x_out, rot_gamma, wordsize))
+        #     y_out, x_in, rotr(lout, self.rot_alpha, wordsize), rotr(lout, self.rot_beta, wordsize),
+        #     rotr(x_out, self.rot_gamma, wordsize))
         command += "ASSERT({0} = BVXOR({1}, BVXOR({2}, {3})));\n".format(
-            y_out, x_in, rotr(x_out, rot_gamma, wordsize), lin)
+            y_out, x_in, rotr(x_out, self.rot_gamma, wordsize), lin)
 
         #For weight computation
         #Compute abits
@@ -195,7 +189,7 @@ class SimonLinearCipher(AbstractCipher):
             command += "ASSERT({} = {});\n".format(
                 sbits[i], rotl("({} & {})".format(
                     rotl(sbits[i - 1], deltarot, wordsize),
-                    rotr(sbits[i-1], rot_beta, wordsize)),
+                    rotr(sbits[i-1], self.rot_beta, wordsize)),
                     deltarot, wordsize)
                 )
             command += "ASSERT({} = {});\n".format(
@@ -203,7 +197,7 @@ class SimonLinearCipher(AbstractCipher):
                     pbits[i - 1], sbits[i], lin), 2*deltarot, wordsize)
                 )
 
-        command += "ASSERT({} = 0x{});\n".format(pbits[wordsize - 1], "0"*(wordsize / 4))
+        command += "ASSERT({} = 0x{});\n".format(pbits[wordsize - 1], "0"*(wordsize // 4))
 
         stp_file.write(command)
         return

@@ -24,59 +24,57 @@ def computeProbabilityOfDifferentials(cipher, parameters):
     a SAT solver.
     """
     rnd_string_tmp = '%030x' % random.randrange(16**30)
-    weight = parameters["sweight"]
     diff_prob = 0
     characteristics_found = 0
     sat_logfile = "tmp/satlog{}.tmp".format(rnd_string_tmp)
 
     start_time = time.time()
 
-    while weight < MAX_WEIGHT:
-        if(os.path.isfile(sat_logfile)):
+    while not reachedTimelimit(start_time, parameters["timelimit"]) and \
+        parameters["sweight"] < MAX_WEIGHT:
+
+        if os.path.isfile(sat_logfile):
             os.remove(sat_logfile)
 
-        cipher_params = cipher.getParamList(parameters["rounds"],
-                                            parameters["wordsize"],
-                                            weight)
-        cipher_params.append(parameters["iterative"])
-        cipher_params.append(parameters.get("fixedVariables"))
-        cipher_params.append(parameters.get("blockedCharacteristics"))
-        cipher_params.append(parameters.get("nummessages"))
+        stp_file = "tmp/{}{}.stp".format(cipher.name, rnd_string_tmp)
+        cipher.createSTP(stp_file, parameters)
 
-        stp_file = "tmp/{}{}.stp".format(cipher.getName(), rnd_string_tmp)
-        # Start STP
-        cipher.createSTP(stp_file, cipher_params)
-        subprocess.check_output([PATH_STP, "--exit-after-CNF",
-                                 "--output-CNF", stp_file])
+        # Start solver
+        sat_process = startSATsolver(stp_file)
+        log_file = open(sat_logfile, "w")
 
         # Find the number of solutions with the SAT solver
-        print "Checking for number of solutions of weight " + str(weight)
-        sat_params = [PATH_CRYPTOMINISAT, "--maxsol",
-                      str(MAX_CHARACTERISTICS), "--verb", "0",
-                      "-s", "0", "output_0.cnf"]
+        print("Finding all trails of weight {}".format(parameters["sweight"]))
 
-        log_file = open(sat_logfile, "w")
-        sat_process = subprocess.Popen(sat_params, stdout=log_file)
-        sat_process.wait()
+        # Watch the process and count solutions
+        solutions = 0
+        while sat_process.poll() is None:
+            line = sat_process.stdout.readline().decode("utf-8")
+            log_file.write(line)
+            if "s SATISFIABLE" in line:
+                solutions += 1
+            if solutions % 100 == 0:
+                print("\tSolutions: {}\r".format(solutions // 2), end="")
 
-        with open(sat_logfile, "r") as sat_output:
-            solutions = 0
-            for line in sat_output:
-                if "s SATISFIABLE" in line:
-                    solutions += 1
-            # STP seems to produce wrong CNF which leads
-            # to double the solutions.
-            solutions /= 2
+        log_file.close()
+        print("\tSolutions: {}".format(solutions // 2))
+
+        assert solutions == countSolutionsLogfile(sat_logfile)
+
+        # The encoded CNF contains every solution twice
+        solutions //= 2
 
         # Print result
-        diff_prob += math.pow(2, -weight) * solutions
+        diff_prob += math.pow(2, -parameters["sweight"]) * solutions
         characteristics_found += solutions
         if diff_prob > 0.0:
-            print "\tSolutions: {}".format(solutions)
-            print "\tCharacteristics Found: {}".format(characteristics_found)
-            print "\tCurrent Probability: " + str(math.log(diff_prob, 2))
-            print "\tTime: {}s".format(round(time.time() - start_time, 2))
-        weight += 1
+            #print("\tSolutions: {}".format(solutions))
+            print("\tTrails found: {}".format(characteristics_found))
+            print("\tCurrent Probability: " + str(math.log(diff_prob, 2)))
+            print("\tTime: {}s".format(round(time.time() - start_time, 2)))
+        parameters["sweight"] += 1
+
+    return diff_prob
 
 
 def findBestConstants(cipher, parameters):
@@ -98,7 +96,8 @@ def findBestConstants(cipher, parameters):
                 continue
             #Filter symmetric cases
             if beta > alpha:
-                constantMinWeights.append(constantMinWeights[alpha*wordsize + beta])
+                constantMinWeights.append(constantMinWeights[alpha * wordsize +
+                                                             beta])
                 continue
             #Filter gcd(alpha - beta, n) != 1 cases
             if gcd(alpha - beta, wordsize) != 1:
@@ -106,56 +105,27 @@ def findBestConstants(cipher, parameters):
                 continue
 
             while weight < MAX_WEIGHT:
-                #print "Weight: {}".format(weight)
-                cipher_params = cipher.getParamList(parameters["rounds"],
-                                                    parameters["wordsize"],
-                                                    weight)
-                cipher_params[1] = alpha
-                cipher_params[2] = beta
-                cipher_params[3] = gamma
-                cipher_params.append(parameters["iterative"])
-                cipher_params.append(parameters.get("fixedVariables"))
-                cipher_params.append(parameters.get("blockedCharacteristics"))
-                cipher_params.append(parameters.get("nummessages"))
+                parameters["rotationconstants"] = [alpha, beta, gamma]
 
                 # Construct problem instance for given parameters
-                stp_file = "tmp/{}_{}const.stp".format(cipher.getName(), gamma)
-                cipher.createSTP(stp_file, cipher_params)
+                stp_file = "tmp/{}_{}const.stp".format(cipher.name, gamma)
+                cipher.createSTP(stp_file, parameters)
 
                 result = ""
                 if parameters["boolector"]:
-                    #Use STP to create SMTLIB-2
-                    input_file = subprocess.check_output([PATH_STP,
-                                                         "--print-back-SMTLIB2",
-                                                         stp_file])
-
-                    #Start Boolector
-                    opened_process = subprocess.Popen([PATH_BOOLECTOR, "-x", "-m"],
-                                                      stdout=subprocess.PIPE,
-                                                      stdin=subprocess.PIPE)
-                    result = opened_process.communicate(input=input_file)[0]
+                    result = solveBoolector(stp_file)
                 else:
-                    result = subprocess.check_output([PATH_STP, stp_file])
+                    result = solveSTP(stp_file)
 
                 # Check if a characteristic was found
-                if "Valid" not in result and "unsat" not in result:
-                    #print("Characteristic for {} - Rounds {} - Wordsize {}- "
-                    #      "Weight {}".format(cipher.getName(), parameters["rounds"],
-                    #                         parameters["wordsize"], weight))
-                    print "Alpha: {} Beta: {} Gamma: {} Weight: {}".format(alpha, beta, gamma, weight)
-                    characteristic = ""
-                    if parameters["boolector"]:
-                        characteristic = parsesolveroutput.getCharBoolectorOutput(
-                            result, cipher.getFormatString(), parameters["rounds"])
-                    else:
-                        characteristic = parsesolveroutput.getCharSTPOutput(
-                            result, cipher.getFormatString(), parameters["rounds"])
-                    #characteristic.printText()
+                if foundSolution(result):
+                    print("Alpha: {} Beta: {} Gamma: {} Weight: {}".format(
+                        alpha, beta, gamma, weight))
                     break
                 weight += 1
             constantMinWeights.append(weight)
-    print constantMinWeights
-
+    print(constantMinWeights)
+    return constantMinWeights
 
 def findMinWeightCharacteristic(cipher, parameters):
     """
@@ -163,52 +133,41 @@ def findMinWeightCharacteristic(cipher, parameters):
     parameters = [rounds, wordsize, sweight, isIterative, fixedVariables]
     """
 
-    print("Starting search for characteristic with minimal weight\n"
-          "{} - Rounds: {} Wordsize: {}".format(cipher.getName(),
-                                                parameters["rounds"],
-                                                parameters["wordsize"]))
-    print "---"
+    print(("Starting search for characteristic with minimal weight\n"
+           "{} - Rounds: {} Wordsize: {}".format(cipher.name,
+                                                 parameters["rounds"],
+                                                 parameters["wordsize"])))
+    print("---")
 
     start_time = time.time()
-    weight = parameters["sweight"]
 
-    while weight < MAX_WEIGHT:
-        print "Weight: {} Time: {}s".format(weight, round(time.time() - start_time, 2))
-        cipher_params = cipher.getParamList(parameters["rounds"],
-                                            parameters["wordsize"],
-                                            weight)
-        cipher_params.append(parameters["iterative"])
-        cipher_params.append(parameters.get("fixedVariables"))
-        cipher_params.append(parameters.get("blockedCharacteristics"))
-        cipher_params.append(parameters.get("nummessages"))
+    while not reachedTimelimit(start_time, parameters["timelimit"]) and \
+        parameters["sweight"] < MAX_WEIGHT:
+
+        print("Weight: {} Time: {}s".format(parameters["sweight"],
+                                            round(time.time() - start_time, 2)))
 
         # Construct problem instance for given parameters
-        stp_file = "tmp/{}{}.stp".format(cipher.getName(), parameters["wordsize"])
-        cipher.createSTP(stp_file, cipher_params)
+        stp_file = "tmp/{}{}.stp".format(cipher.name,
+                                         parameters["wordsize"])
+        cipher.createSTP(stp_file, parameters)
 
         result = ""
         if parameters["boolector"]:
-            #Use STP to create SMTLIB-2
-            input_file = subprocess.check_output([PATH_STP,
-                                                 "--print-back-SMTLIB2",
-                                                 stp_file])
-
-            #Start Boolector
-            opened_process = subprocess.Popen([PATH_BOOLECTOR, "-x", "-m"],
-                                              stdout=subprocess.PIPE,
-                                              stdin=subprocess.PIPE)
-            result = opened_process.communicate(input=input_file)[0]
+            result = solveBoolector(stp_file)
         else:
-            result = subprocess.check_output([PATH_STP, stp_file])
+            result = solveSTP(stp_file)
 
         # Check if a characteristic was found
-        if "Valid" not in result and "unsat" not in result:
+        if foundSolution(result):
+            current_time = round(time.time() - start_time, 2)
             print("---")
-            print("Characteristic for {} - Rounds {} - Wordsize {} - "
-                  "Weight {} - Time {}s".format(
-                    cipher.getName(), parameters["rounds"],
-                    parameters["wordsize"], weight,
-                    round(time.time() - start_time, 2)))
+            print(("Characteristic for {} - Rounds {} - Wordsize {} - "
+                   "Weight {} - Time {}s".format(cipher.name,
+                                                 parameters["rounds"],
+                                                 parameters["wordsize"],
+                                                 parameters["sweight"],
+                                                 current_time)))
             characteristic = ""
             if parameters["boolector"]:
                 characteristic = parsesolveroutput.getCharBoolectorOutput(
@@ -218,55 +177,52 @@ def findMinWeightCharacteristic(cipher, parameters):
                     result, cipher.getFormatString(), parameters["rounds"])
             characteristic.printText()
             break
-        weight += 1
-    return weight
+        parameters["sweight"] += 1
+    return parameters["sweight"]
 
 
 def findAllCharacteristics(cipher, parameters):
     """
     Outputs all characteristics of a specific weight by excluding
-    solutions iteratively
+    solutions iteratively.
     """
     rnd_string_tmp = '%030x' % random.randrange(16**30)
-    weight = parameters["sweight"]
+    start_time = time.time()
     total_num_characteristics = 0
-    characteristics_found = []
 
-    while True:
-        cipher_params = cipher.getParamList(parameters["rounds"],
-                                            parameters["wordsize"],
-                                            weight)
-        cipher_params.append(parameters["iterative"])
-        cipher_params.append(parameters["fixedVariables"])
-        cipher_params.append(characteristics_found)
-        cipher_params.append(parameters.get("nummessages"))
-
-        stp_file = "tmp/{}{}.stp".format(cipher.getName(), rnd_string_tmp)
+    while not reachedTimelimit(start_time, parameters["timelimit"]):
+        stp_file = "tmp/{}{}.stp".format(cipher.name, rnd_string_tmp)
 
         # Start STP TODO: add boolector support
-        cipher.createSTP(stp_file, cipher_params)
-        process_output = subprocess.check_output([PATH_STP,
-                                                  "--cryptominisat4",
-                                                  stp_file])
+        cipher.createSTP(stp_file, parameters)
+
+        result = ""
+        if parameters["boolector"]:
+            result = solveBoolector(stp_file)
+        else:
+            result = solveSTP(stp_file)
 
         # Check for solution
-        if "Invalid" in process_output:
-            print("Characteristic for {} - Rounds {} - Wordsize {}- "
-                  "Weight {}".format(cipher.getName(), parameters["rounds"],
-                                     parameters["wordsize"], weight))
+        if foundSolution(result):
+            print(("Characteristic for {} - Rounds {} - Wordsize {}- "
+                   "Weight {}".format(cipher.name,
+                                      parameters["rounds"],
+                                      parameters["wordsize"],
+                                      parameters["sweight"])))
 
-            characteristic = parsesolveroutput.getCharSTPOutput(
-                process_output, cipher.getFormatString(),
-                parameters["rounds"])
+            characteristic = parsesolveroutput.getCharSTPOutput(result,
+                                                                cipher.getFormatString(),
+                                                                parameters["rounds"])
 
             characteristic.printText()
-            characteristics_found.append(characteristic)
+            parameters["blockedCharacteristics"].append(characteristic)
         else:
-            print "Found {} characteristics with weight {}\n".format(
-                total_num_characteristics, weight)
+            print("Found {} characteristics with weight {}\n".format(
+                total_num_characteristics, parameters["sweight"]))
             break
 
         total_num_characteristics += 1
+    return total_num_characteristics
 
 
 def searchCharacteristics(cipher, parameters):
@@ -275,9 +231,78 @@ def searchCharacteristics(cipher, parameters):
     for an increasing number of rounds.
     """
     while True:
-        print "Number of rounds: {}".format(parameters["rounds"])
+        print("Number of rounds: {}".format(parameters["rounds"]))
         parameters["sweight"] = findMinWeightCharacteristic(cipher, parameters)
-        print "Rounds:"
+        print("Rounds:")
         parameters["rounds"] = parameters["rounds"] + 1
-        if(parameters["rounds"] > 16):
-            return
+    return
+
+def reachedTimelimit(start_time, timelimit):
+    """
+    Return True if the timelimit was reached.
+    """
+    if round(time.time() - start_time) >= timelimit and timelimit != -1:
+        print("Reached the time limit of {} seconds".format(timelimit))
+        return True
+    return False
+
+def countSolutionsLogfile(logfile_path):
+    """
+    Count the number of solutions in a CryptoMiniSat Logfile
+    """
+    with open(logfile_path, "r") as logfile:
+        logged_solutions = 0
+        for line in logfile:
+            if "s SATISFIABLE" in line:
+                logged_solutions += 1
+        return logged_solutions
+    return -1
+
+def startSATsolver(stp_file):
+    """
+    Return CryptoMiniSat process started with the given stp_file.
+    """
+    # Start STP to construct CNF
+    subprocess.check_output([PATH_STP, "--exit-after-CNF", "--output-CNF",
+                             stp_file])
+
+    # Find the number of solutions with the SAT solver
+    sat_params = [PATH_CRYPTOMINISAT, "--maxsol", str(MAX_CHARACTERISTICS),
+                  "--verb", "0", "-s", "0", "output_0.cnf"]
+
+    sat_process = subprocess.Popen(sat_params, stderr=subprocess.PIPE,
+                                   stdout=subprocess.PIPE)
+
+    return sat_process
+
+def solveSTP(stp_file):
+    """
+    Returns the solution for the given SMT problem using STP.
+    """
+    stp_parameters = [PATH_STP, stp_file]
+    result = subprocess.check_output(stp_parameters)
+
+    return result.decode("utf-8")
+
+def solveBoolector(stp_file):
+    """
+    Returns the solution for the given SMT problem using boolector.
+    """
+    # Create input file with help of STP
+    stp_parameters = [PATH_STP, "--print-back-SMTLIB2", stp_file]
+    input_file = subprocess.check_output(stp_parameters)
+
+    boolector_parameters = [PATH_BOOLECTOR, "-x", "-m"]
+    boolector_process = subprocess.Popen(boolector_parameters,
+                                         stdout=subprocess.PIPE,
+                                         stdin=subprocess.PIPE)
+
+    result = boolector_process.communicate(input=input_file)[0]
+
+    return result.decode("utf-8")
+
+def foundSolution(solver_result):
+    """
+    Check if a solution was found.
+    """
+    return "Valid" not in solver_result and "unsat" not in solver_result

@@ -12,7 +12,7 @@ from parser.stpcommands import getStringLeftRotate as rotl
 
 class KeccakCipher(AbstractCipher):
     """
-    Represents the Keccak hash function.
+    Represents the Keccak hash function and can be used to find preimages.
     """
 
     RO = [[0,  36,  3, 41, 18],
@@ -37,16 +37,22 @@ class KeccakCipher(AbstractCipher):
                 's03', 's13', 's23', 's33', 's43',
                 's04', 's14', 's24', 's34', 's44']
 
-    def createSTP(self, stp_filename, cipherParameters):
+    def createSTP(self, stp_filename, parameters):
         """
         Creates an STP file to find a preimage for Keccak.
         """
-        wordsize = cipherParameters[0]
-        rate = cipherParameters[1]
-        capacity = cipherParameters[2]
-        rounds = cipherParameters[3]
-        #is_iterative = cipherParameters[4]
-        fixed_vars = cipherParameters[5]
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+
+        # Default rate and capacity
+        rate = 240
+        capacity = (wordsize * 25) - rate
+
+        if "rate" in parameters:
+            rate = parameters["rate"]
+
+        if "capacity" in parameters:
+            capacity = parameters["capacity"]
 
         with open(stp_filename, 'w') as stp_file:
             stp_file.write("% Input File for STP\n% Keccak w={} rate={} "
@@ -70,27 +76,21 @@ class KeccakCipher(AbstractCipher):
             stpcommands.setupVariables(stp_file, c, wordsize)
             stpcommands.setupVariables(stp_file, d, wordsize)
 
-            #Fix variables for capacity, only works if rate/capacity is multiple of wordsize
-            for i in range(rate / wordsize, (rate + capacity) / wordsize):
-                stpcommands.assertVariableValue(stp_file, s[i], "0hex{}".format("0"*(wordsize / 4)))
+            # Fix variables for capacity, only works if rate/capacity 
+            # is multiple of wordsize
+            for i in range(rate // wordsize, (rate + capacity) // wordsize):
+                stpcommands.assertVariableValue(stp_file, s[i], "0hex{}".format(
+                    "0" * (wordsize // 4)))
 
             for rnd in range(rounds):
                 self.setupKeccakRound(stp_file, rnd, s, a, b, c, d, wordsize)
 
-            if fixed_vars:
-                for key, value in fixed_vars.iteritems():
-                    stpcommands.assertVariableValue(stp_file, key, value)
+            for key, value in parameters["fixedVariables"].items():
+                stpcommands.assertVariableValue(stp_file, key, value)
 
             stpcommands.setupQuery(stp_file)
 
         return
-
-    def getParamList(self, rounds, wordsize, weight):
-        """
-        Returns the parameters for Keccak.
-        TODO: Add parameters to yaml files
-        """
-        return [wordsize, 240, 160, rounds]
 
     def setupKeccakRound(self, stp_file, rnd, s, a, b, c, d, wordsize):
         """

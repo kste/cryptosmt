@@ -18,9 +18,9 @@ class DifferentialCharacteristic(object):
     weight = 0
     msg_blocks = 1
 
-    def __init__(self, data, format, rounds, weight):
+    def __init__(self, data, print_format, rounds, weight):
         self.characteristic_data = data
-        self.print_format = format
+        self.print_format = print_format
         self.num_rounds = rounds
         self.weight = weight
         return
@@ -37,16 +37,16 @@ class DifferentialCharacteristic(object):
             header.append(word)
 
         # Get data
-        for round in range(0, (self.num_rounds + 1) * self.msg_blocks):
+        for rnd in range(0, (self.num_rounds + 1) * self.msg_blocks):
             tmp_row = []
             for word in self.print_format:
                 try:
                     # Add word to table
                     if word == 'w':
-                        weight = self.characteristic_data[word+str(round)]
+                        weight = self.characteristic_data[word+str(rnd)]
                         tmp_row.append("-" + str(bin(int(weight, 16)).count('1')))
                     else:
-                        tmp_row.append(self.characteristic_data[word+str(round)])
+                        tmp_row.append(self.characteristic_data[word+str(rnd)])
                 except KeyError:
                     tmp_row.append("none")
             if tmp_row:
@@ -67,15 +67,15 @@ class DifferentialCharacteristic(object):
                 data_str += entry.ljust(col_width)
             data_str += '\n'
 
-        print header_str
-        print "-"*len(header_str)
-        print data_str
-        print "Weight: " + str(int(self.weight, 16))
+        print(header_str)
+        print("-"*len(header_str))
+        print(data_str)
+        print("Weight: " + str(int(self.weight, 16)))
         return
 
     def printLatex(self):
         '''
         Prints latex table using booktabs
         '''
-        print "not implemented yet"
+        print("not implemented yet")
         return
