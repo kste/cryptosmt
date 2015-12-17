@@ -1,0 +1,57 @@
+# Try to find a trail leading to an internal collision 
+# for the Ketje permutation.
+---
+cipher: ketje
+rounds: 2
+wordsize: 4
+mode: 0
+fixedVariables:
+# Only allow differences in the first two words.
+- s200: "0x0"
+- s300: "0x0"
+- s400: "0x0"
+- s010: "0x0"
+- s110: "0x0"
+- s210: "0x0"
+- s310: "0x0"
+- s410: "0x0"
+- s020: "0x0"
+- s120: "0x0"
+- s220: "0x0"
+- s320: "0x0"
+- s420: "0x0"
+- s030: "0x0"
+- s130: "0x0"
+- s230: "0x0"
+- s330: "0x0"
+- s430: "0x0"
+- s040: "0x0"
+- s140: "0x0"
+- s240: "0x0"
+- s340: "0x0"
+- s440: "0x0"
+# No differences in the internal state at the output.
+- s203: "0x0"
+- s303: "0x0"
+- s403: "0x0"
+- s013: "0x0"
+- s113: "0x0"
+- s213: "0x0"
+- s313: "0x0"
+- s413: "0x0"
+- s023: "0x0"
+- s123: "0x0"
+- s223: "0x0"
+- s323: "0x0"
+- s423: "0x0"
+- s033: "0x0"
+- s133: "0x0"
+- s233: "0x0"
+- s333: "0x0"
+- s433: "0x0"
+- s043: "0x0"
+- s143: "0x0"
+- s243: "0x0"
+- s343: "0x0"
+- s443: "0x0"
+...

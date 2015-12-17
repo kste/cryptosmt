@@ -41,14 +41,16 @@ class KeccakCipher(AbstractCipher):
         rounds = parameters["rounds"]
 
         # Default rate and capacity
-        rate = 240
-        capacity = (wordsize * 25) - rate
+        capacity = 160
+        rate = (wordsize * 25) - capacity
 
         if "rate" in parameters:
             rate = parameters["rate"]
 
         if "capacity" in parameters:
             capacity = parameters["capacity"]
+
+        assert (rate + capacity) == wordsize * 25            
 
         with open(stp_filename, 'w') as stp_file:
             stp_file.write("% Input File for STP\n% Keccak w={} rate={} "

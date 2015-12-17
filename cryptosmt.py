@@ -5,8 +5,9 @@ Created on Mar 28, 2014
 '''
 
 from cryptanalysis import search
-from ciphers import (simon, speck, simonlinear, keccak, siphash, simonrk,
-                     chaskeymachalf, simonkeyrc)
+from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
+                     siphash, simonrk, chaskeymachalf, simonkeyrc,
+                     ketje)
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -24,6 +25,8 @@ def startsearch(tool_parameters):
                     "speck" : speck.SpeckCipher(),
                     "simonlinear" : simonlinear.SimonLinearCipher(),
                     "keccak" : keccak.KeccakCipher(),
+                    "keccakdiff" : keccakdiff.KeccakDiffCipher(),
+                    "ketje" : ketje.KetjeCipher(),
                     "siphash" : siphash.SipHashCipher(),
                     "simonrk" : simonrk.SimonRkCipher(),
                     "simonkeyrc" : simonkeyrc.SimonKeyRcCipher(),

@@ -171,10 +171,10 @@ def findMinWeightCharacteristic(cipher, parameters):
             characteristic = ""
             if parameters["boolector"]:
                 characteristic = parsesolveroutput.getCharBoolectorOutput(
-                    result, cipher.getFormatString(), parameters["rounds"])
+                    result, cipher, parameters["rounds"])
             else:
                 characteristic = parsesolveroutput.getCharSTPOutput(
-                    result, cipher.getFormatString(), parameters["rounds"])
+                    result, cipher, parameters["rounds"])
 
             characteristic.printText()
 
@@ -227,10 +227,10 @@ def findAllCharacteristics(cipher, parameters):
             characteristic = ""
             if parameters["boolector"]:
                 characteristic = parsesolveroutput.getCharBoolectorOutput(
-                    result, cipher.getFormatString(), parameters["rounds"])
+                    result, cipher, parameters["rounds"])
             else:
                 characteristic = parsesolveroutput.getCharSTPOutput(
-                    result, cipher.getFormatString(), parameters["rounds"])
+                    result, cipher, parameters["rounds"])
 
             characteristic.printText()
             parameters["blockedCharacteristics"].append(characteristic)

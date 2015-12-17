@@ -96,10 +96,25 @@ def limitWeight(stpfile, weight, p, wordsize, ignoreMSBs=0):
     stpfile.write("ASSERT(BVLE(limitWeight, {0:#018b}));\n".format(weight))
     return
 
+def setupWeightComputationSum(stpfile, weight, p, wordsize, ignoreMSBs=0):
+    """
+    Assert that weight is equal to the sum of p.
+    """
+    stpfile.write("weight: BITVECTOR(16);\n")
+    round_sum = ""
+    for w in p:
+        round_sum += w + ","
+    if len(p) > 1:
+        stpfile.write("ASSERT(weight = BVPLUS({},{}));\n".format(16, round_sum[:-1]))
+    else:
+        stpfile.write("ASSERT(weight = {});\n".format(round_sum[:-1]))
+
+    stpfile.write("ASSERT(weight = {0:#018b});\n".format(weight))
+    return
 
 def setupWeightComputation(stpfile, weight, p, wordsize, ignoreMSBs=0):
     """
-    Adds the weight computation and assertion to the stp stpfile.
+    Assert that weight is equal to the sum of the hamming weight of p.
     """
     stpfile.write("weight: BITVECTOR(16);\n")
     stpfile.write(getWeightString(p, wordsize, ignoreMSBs) + "\n")

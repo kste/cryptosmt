@@ -17,12 +17,14 @@ class DifferentialCharacteristic(object):
     num_rounds = 0
     weight = 0
     msg_blocks = 1
+    cipher = None
 
-    def __init__(self, data, print_format, rounds, weight):
+    def __init__(self, data, cipher, rounds, weight):
         self.characteristic_data = data
-        self.print_format = print_format
+        self.print_format = cipher.getFormatString()
         self.num_rounds = rounds
         self.weight = weight
+        self.cipher = cipher
         return
 
     def getData(self):
@@ -38,7 +40,12 @@ class DifferentialCharacteristic(object):
                     # Add word to table
                     if word == 'w':
                         weight = self.characteristic_data[word+str(rnd)]
-                        tmp_row.append("-" + str(bin(int(weight, 16)).count('1')))
+                        # Print hw(weight) or weight depending on the cipher
+                        if self.cipher.name == "keccakdiff" or \
+                           self.cipher.name == "ketje":
+                            tmp_row.append("-" + str(int(weight, 16)))
+                        else:
+                            tmp_row.append("-" + str(bin(int(weight, 16)).count('1')))
                     else:
                         tmp_row.append(self.characteristic_data[word+str(rnd)])
                 except KeyError:

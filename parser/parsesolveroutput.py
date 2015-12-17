@@ -8,7 +8,7 @@ from cryptanalysis import diffchars
 import re
 
 
-def getCharBoolectorOutput(output, char_format, rounds):
+def getCharBoolectorOutput(output, cipher, rounds):
     """
     Parse the output of Boolector and construct a characteristic.
     """
@@ -23,11 +23,11 @@ def getCharBoolectorOutput(output, char_format, rounds):
             var_value = "0x" + row.split(" ")[1]
             characteristic[var_name] = var_value
 
-    return diffchars.DifferentialCharacteristic(characteristic, char_format,
-                                                rounds, weight)
+    return diffchars.DifferentialCharacteristic(characteristic,
+                                                cipher, rounds, weight)
 
 
-def getCharSTPOutput(output, char_format, rounds):
+def getCharSTPOutput(output, cipher, rounds):
     """
     Parse the output of STP and construct a characteristic.
     """
@@ -43,5 +43,5 @@ def getCharSTPOutput(output, char_format, rounds):
             var_value = tmp.group(2)
             characteristic[var_name] = var_value
 
-    return diffchars.DifferentialCharacteristic(characteristic, char_format,
-                                                rounds, weight)
+    return diffchars.DifferentialCharacteristic(characteristic,
+                                                cipher, rounds, weight)
