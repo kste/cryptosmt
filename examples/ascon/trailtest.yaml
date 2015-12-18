@@ -1,0 +1,16 @@
+# Try to find a trail leading to a collision in
+# the finalization of ascon
+---
+cipher: ascon # No message addition in every round
+rounds: 3
+wordsize: 64
+mode: 0
+rate: 320
+capacity: 0
+fixedVariables:
+- s00: "0x8000000000000000"
+- s10: "0x0000000000000000"
+- s20: "0x0000000000000000"
+- s30: "0x0000000000000000"
+- s40: "0x0000000000000000"
+...

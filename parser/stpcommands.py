@@ -10,12 +10,13 @@ def blockCharacteristic(stpfile, characteristic, wordsize):
     """
     Excludes this characteristic from being found.
     """
-    # Only add state words (x, y)
+    # Only add state words (x, y, s)
     # TODO: extend for other ciphers
     filtered_words = {var_name: var_value for var_name, var_value in
                       characteristic.characteristic_data.items()
                       if var_name.startswith('x') or
                       var_name.startswith('y') or
+                      var_name.startswith('s') or
                       var_name.startswith('v')}
 
     blockingStatement = "ASSERT(NOT("

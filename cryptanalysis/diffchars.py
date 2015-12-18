@@ -42,7 +42,8 @@ class DifferentialCharacteristic(object):
                         weight = self.characteristic_data[word+str(rnd)]
                         # Print hw(weight) or weight depending on the cipher
                         if self.cipher.name == "keccakdiff" or \
-                           self.cipher.name == "ketje":
+                           self.cipher.name == "ketje" or \
+                           self.cipher.name == "ascon":
                             tmp_row.append("-" + str(int(weight, 16)))
                         else:
                             tmp_row.append("-" + str(bin(int(weight, 16)).count('1')))
