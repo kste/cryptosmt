@@ -12,7 +12,10 @@ from parser.stpcommands import getStringLeftRotate as rotl
 
 class KeccakCipher(AbstractCipher):
     """
-    Represents the Keccak hash function and can be used to find preimages.
+    This class provides a model for the Keccak hash function by
+    Guido Bertoni, Joan Daemen, Michael Peeters and Gilles Van Assche.
+    
+    For more information on Keccak see http://keccak.noekeon.org/
     """
 
     name = "keccak"

@@ -13,7 +13,11 @@ from parser.stpcommands import getStringLeftRotate as rotl
 
 class KetjeCipher(AbstractCipher):
     """
-    Represents the differential behaviour of Ketje.
+    This class provides a model for the differential behaviour of the
+    Ketje authenticated encryption scheme by Guido Bertoni, Joan Daemen, 
+    Michael Peeters, Gilles Van Assche and Ronny Van Keer.
+    
+    For more information on Ketje see http://competitions.cr.yp.to/round1/ketjev11.pdf
     """
 
     name = "ketje"

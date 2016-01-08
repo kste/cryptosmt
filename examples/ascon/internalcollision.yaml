@@ -1,0 +1,21 @@
+# Try to find a trail leading to an internal collision 
+# in Ascon
+---
+cipher: ascon # No message addition in every round
+rounds: 3
+wordsize: 64
+mode: 0
+rate: 320
+capacity: 0
+fixedVariables:
+# Only difference in first word
+- s10: "0x0000000000000000"
+- s20: "0x0000000000000000"
+- s30: "0x0000000000000000"
+- s40: "0x0000000000000000"
+# No difference in remaining words
+- s13: "0x0000000000000000"
+- s23: "0x0000000000000000"
+- s33: "0x0000000000000000"
+- s43: "0x0000000000000000"
+...

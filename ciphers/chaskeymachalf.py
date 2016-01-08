@@ -13,10 +13,14 @@ from parser.stpcommands import getStringRightRotate as rotr
 
 class ChasKeyMacHalf(AbstractCipher):
     """
-    Represents the differential behaviour of the ChasKeyMAC and can be used
-    to find differential characteristics for the given parameters.
+    This class provides a model for the differential behaviour of the
+    Chaskey MAC by Nicky Mouha, Bart Mennink, Anthony Van Herrewege, 
+    Dai Watanabe, Bart Preneel and Ingrid Verbauwhede.
+    
+    For more information on Chaskey see http://mouha.be/chaskey/
     """
-    name ="chaskeyhalf"
+
+    name = "chaskeyhalf"
     num_messages = 1
 
     def getFormatString(self):

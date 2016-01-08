@@ -8,13 +8,16 @@ from parser import stpcommands
 from ciphers.cipher import AbstractCipher
 
 from parser.stpcommands import getStringLeftRotate as rotl
-from parser.stpcommands import getStringLeftRotate as rotr
+from parser.stpcommands import getStringRightRotate as rotr
 
 
 class AsconCipher(AbstractCipher):
     """
-    Represents the differential behaviour of the ASSCON authenticated
-    cipher.
+    This class provides a differential model of the Ascon authenticated
+    encryption scheme by Christoph Dobrauning, Maria Eichlseder, Florian
+    Mendel and Martin Schläffer.
+
+    For more information on Ascon see http://ascon.iaik.tugraz.at/
     """
 
     name = "ascon"
@@ -23,7 +26,7 @@ class AsconCipher(AbstractCipher):
         """
         Returns the print format.
         """
-        return ['s0', 's1', 's2', 's3', 's4', 
+        return ['s0', 's1', 's2', 's3', 's4',
                 'b0', 'b1', 'b2', 'b3', 'b4', "w"]
 
     def createSTP(self, stp_filename, parameters):
@@ -35,7 +38,6 @@ class AsconCipher(AbstractCipher):
         weight = parameters["sweight"]
 
         sboxsize = 5 # TODO: support arbitrary sizes
-
         capacity = 0
         rate = (wordsize * sboxsize) - capacity
 
@@ -46,11 +48,12 @@ class AsconCipher(AbstractCipher):
             capacity = parameters["capacity"]
 
         assert (rate + capacity) == wordsize * sboxsize
-        
+
         with open(stp_filename, 'w') as stp_file:
             stp_file.write("% Input File for STP\n% Ascon w={} rate={} "
-                           "capacity={}\n\n\n".format(wordsize, rate, capacity,
-                                                      rounds))
+                           "capacity={} round={}\n\n\n".format(wordsize,
+                                                               rate, capacity,
+                                                               rounds))
 
             # Setup variables
             # 5 x wordsize state
@@ -73,13 +76,14 @@ class AsconCipher(AbstractCipher):
                    for y in range(sboxsize) for z in range (wordsize)]
             xout = ["outx{}{}{}".format(y, z, i) for i in range(rounds)
                     for y in range(sboxsize) for z in range (wordsize)]
-            andOut = ["andOut{}{}{}".format(y, z, i) for i in range(rounds)
+            andout = ["andout{}{}{}".format(y, z, i) for i in range(rounds)
                       for y in range(sboxsize) for z in range (wordsize)]
 
 	        # w = weight
             w = ["w{}".format(i) for i in range(rounds)]
-            tmp = ["tmp{}{}{}".format(y, z, i) for i in range(rounds) 
+            tmp = ["tmp{}{}{}".format(y, z, i) for i in range(rounds)
                    for y in range(sboxsize) for z in range (wordsize)]
+
             stpcommands.setupVariables(stp_file, s, wordsize)
             stpcommands.setupVariables(stp_file, a, wordsize)
             stpcommands.setupVariables(stp_file, b, wordsize)
@@ -89,7 +93,7 @@ class AsconCipher(AbstractCipher):
             stpcommands.setupWeightComputationSum(stp_file, weight, w, wordsize)
             stpcommands.setupVariables(stp_file, xin, sboxsize)
             stpcommands.setupVariables(stp_file, xout, sboxsize)
-            stpcommands.setupVariables(stp_file, andOut, sboxsize)
+            stpcommands.setupVariables(stp_file, andout, sboxsize)
 
             # No all zero characteristic
             stpcommands.assertNonZero(stp_file, s, wordsize)
@@ -97,42 +101,46 @@ class AsconCipher(AbstractCipher):
             # Fix variables for capacity, only works if rate/capacity is
             # multiple of wordsize.
             for i in range(rate // wordsize, (rate + capacity) // wordsize):
-               stpcommands.assertVariableValue(stp_file, s[i],
-                                               "0hex{}".format("0"*(wordsize // 4)))
+                stpcommands.assertVariableValue(stp_file, s[i],
+                                                "0hex{}".format("0"*(wordsize // 4)))
 
             for rnd in range(rounds):
-                self.setupAsconRound(stp_file, rnd, s, a, b, c, wordsize, 
-                                      tmp, w, xin, xout, andOut)
+                self.setupAsconRound(stp_file, rnd, s, a, b, c, wordsize, tmp,
+                                     w, xin, xout, andout)
 
             for key, value in parameters["fixedVariables"].items():
                 stpcommands.assertVariableValue(stp_file, key, value)
 
             for char in parameters["blockedCharacteristics"]:
-                stpcommands.blockCharacteristic(stp_file, char, wordsize)                
+                stpcommands.blockCharacteristic(stp_file, char, wordsize)
 
             stpcommands.setupQuery(stp_file)
 
         return
 
     def setupAsconRound(self, stp_file, rnd, s, a, b, c, wordsize, tmp,
-                         w, xin, xout, andOut):
+                        w, xin, xout, andout):
         """
-        Model for one round of Keccak.
+        Model for one round of Ascon.
         """
         command = ""
-
-        # S-box
-        rot_alpha = 2
-        rot_beta = 1
         weight_sum = ""
 
-        # Linear before S-box
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(a[0 + 5*rnd], s[0 + 5*rnd], s[4 + 5*rnd])
+        # Linear part in S-box
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(a[0 + 5*rnd],
+                                                          s[0 + 5*rnd],
+                                                          s[4 + 5*rnd])
         command += "ASSERT({} = {});\n".format(a[1 + 5*rnd], s[1 + 5*rnd])
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(a[2 + 5*rnd], s[2 + 5*rnd], s[1 + 5*rnd])
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(a[2 + 5*rnd],
+                                                          s[2 + 5*rnd],
+                                                          s[1 + 5*rnd])
         command += "ASSERT({} = {});\n".format(a[3 + 5*rnd], s[3 + 5*rnd])
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(a[4 + 5*rnd], s[4 + 5*rnd], s[3 + 5*rnd])
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(a[4 + 5*rnd],
+                                                          s[4 + 5*rnd],
+                                                          s[3 + 5*rnd])
 
+
+        # Model for the S-box
 
         for z in range(wordsize):
             # Construct S-box input
@@ -153,17 +161,17 @@ class AsconCipher(AbstractCipher):
                 b[3 + 5*rnd] + "[{0}:{0}]".format(z) + "@" +
                 b[4 + 5*rnd] + "[{0}:{0}]".format(z))
 
-            xin_rotalpha = rotl(xin[z + 5*wordsize*rnd], rot_alpha, 5)
-            xin_rotbeta = rotl(xin[z + 5*wordsize*rnd], rot_beta, 5)
+            xin_rotalpha = rotl(xin[z + 5*wordsize*rnd], 2, 5)
+            xin_rotbeta = rotl(xin[z + 5*wordsize*rnd], 1, 5)
 
             #Deal with dependent inputs
             varibits = "({0} | {1})".format(xin_rotalpha, xin_rotbeta)
-            doublebits = self.getDoubleBits(xin[z + 5*wordsize*rnd], rot_alpha, rot_beta)
+            doublebits = self.getDoubleBits(xin[z + 5*wordsize*rnd])
 
             #Check for valid difference
-            firstcheck = "({} & ~{})".format(andOut[z + 5*wordsize*rnd], varibits)
+            firstcheck = "({} & ~{})".format(andout[z + 5*wordsize*rnd], varibits)
             secondcheck = "(~BVXOR({}, {}) & {})".format(
-            andOut[z + 5*wordsize*rnd], rotl(andOut[z + 5*wordsize*rnd], rot_alpha - rot_beta, 5), doublebits)
+            andout[z + 5*wordsize*rnd], rotl(andout[z + 5*wordsize*rnd], 2 - 1, 5), doublebits)
             thirdcheck = "(IF {0} = 0b{1} THEN BVMOD(5, {0}, 0b00010) ELSE 0b{2}ENDIF)".format(
                 xin[z + 5*wordsize*rnd], "11111", "00000")
             command += "ASSERT(({} | {} | {}) = 0b{});\n".format(firstcheck,
@@ -173,7 +181,7 @@ class AsconCipher(AbstractCipher):
             command += "ASSERT({} = BVXOR({},{}));\n".format(
                 xout[z + 5*wordsize*rnd], 
                 xin[z + 5*wordsize*rnd], 
-                andOut[z + 5*wordsize*rnd])
+                andout[z + 5*wordsize*rnd])
 
             #Weight computation
             command += ("ASSERT({0} = (IF {1} = 0b{4} THEN BVSUB({5},0b{4},0b{6}1)"
@@ -184,17 +192,23 @@ class AsconCipher(AbstractCipher):
                             5, "0"*4))
 
             weight_sum += ("0b{0}@(BVPLUS({1}, {2}[0:0], {2}[1:1], "
-                           "{2}[2:2],{2}[3:3], {2}[4:4])),".format(
-                                "0"*11, 5, "0b0000@" + 
-                                tmp[z + 5*wordsize*rnd]))
+                "{2}[2:2],{2}[3:3], {2}[4:4])),".format("0"*11, 5, "0b0000@" +
+                                                        tmp[z + 5*wordsize*rnd]))
 
-        command += "ASSERT({}=BVPLUS({},{}));\n".format(w[rnd], 16, weight_sum[:-1])
+        command += "ASSERT({}=BVPLUS({},{}));\n".format(w[rnd], 16, 
+                                                        weight_sum[:-1])
 
         # Linear after S-box
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(c[0 + 5*rnd], b[0 + 5*rnd], b[4 + 5*rnd])
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(c[1 + 5*rnd], b[0 + 5*rnd], b[1 + 5*rnd])
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(c[0 + 5*rnd],
+                                                          b[0 + 5*rnd],
+                                                          b[4 + 5*rnd])
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(c[1 + 5*rnd],
+                                                          b[0 + 5*rnd],
+                                                          b[1 + 5*rnd])
         command += "ASSERT({} = {});\n".format(c[2 + 5*rnd], b[2 + 5*rnd])
-        command += "ASSERT({} = BVXOR({}, {}));\n".format(c[3 + 5*rnd], b[2 + 5*rnd], b[3 + 5*rnd])
+        command += "ASSERT({} = BVXOR({}, {}));\n".format(c[3 + 5*rnd],
+                                                          b[2 + 5*rnd],
+                                                          b[3 + 5*rnd])
         command += "ASSERT({} = {});\n".format(c[4 + 5*rnd], b[4 + 5*rnd])
 
 
@@ -206,13 +220,13 @@ class AsconCipher(AbstractCipher):
                 c[row + 5*rnd],
                 rotr(c[row + 5*rnd], rot_constants[row][0], wordsize),
                 rotr(c[row + 5*rnd], rot_constants[row][1], wordsize),
-            )       
+            )
 
         stp_file.write(command)
         return
 
-    def getDoubleBits(self, xin, rot_alpha, rot_beta):
+    def getDoubleBits(self, xin):
         command = "({0} & ~{1} & {2})".format(
-            rotl(xin, rot_beta, 5), rotl(xin, rot_alpha, 5),
-            rotl(xin, 2*rot_alpha - rot_beta, 5))
+            rotl(xin, 1, 5), rotl(xin, 2, 5),
+            rotl(xin, 2*2 - 1, 5))
         return command

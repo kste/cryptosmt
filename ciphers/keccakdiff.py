@@ -13,7 +13,11 @@ from parser.stpcommands import getStringLeftRotate as rotl
 
 class KeccakDiffCipher(AbstractCipher):
     """
-    Represents the differential behaviour of the Keccak hash function.
+    This class provides a model for the differential behaviour
+    of the Keccak hash function by Guido Bertoni, Joan Daemen, 
+    Michael Peeters and Gilles Van Assche.
+    
+    For more information on Keccak see http://keccak.noekeon.org/    
     """
 
     name = "keccakdiff"
@@ -184,12 +188,17 @@ class KeccakDiffCipher(AbstractCipher):
                     andOut[z + wordsize*y + 5*wordsize*rnd])
 
                 #Weight computation
-                command += ("ASSERT({0} = (IF {1} = 0b{4} THEN BVSUB({5},0b{4},0b{6}1)"
+                if rnd != 3:
+                    command += ("ASSERT({0} = (IF {1} = 0b{4} THEN BVSUB({5},0b{4},0b{6}1)"
                             "ELSE BVXOR({2}, {3}) ENDIF));\n".format(
                                 tmp[z + wordsize*y + 5*wordsize*rnd], 
                                 xin[z + wordsize*y + 5*wordsize*rnd], 
                                 varibits, doublebits, "1"*5,
                                 5, "0"*4))
+                else:
+                    command += ("ASSERT({0} = {1});\n".format(
+                                tmp[z + wordsize*y + 5*wordsize*rnd], 
+                                "0b00000"))
 
                 weight_sum += ("0b{0}@(BVPLUS({1}, {2}[0:0], {2}[1:1], "
                                "{2}[2:2],{2}[3:3], {2}[4:4])),".format(
