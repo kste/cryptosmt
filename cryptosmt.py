@@ -7,7 +7,7 @@ Created on Mar 28, 2014
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
                      siphash, simonrk, chaskeymachalf, simonkeyrc,
-                     ketje, keccakcollision, ascon, salsa, chacha)
+                     ketje, ascon, salsa, chacha)
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -25,7 +25,6 @@ def startsearch(tool_parameters):
                     "speck" : speck.SpeckCipher(),
                     "simonlinear" : simonlinear.SimonLinearCipher(),
                     "keccak" : keccak.KeccakCipher(),
-                    "keccakcollision" : keccakcollision.KeccakCollisionCipher(),
                     "keccakdiff" : keccakdiff.KeccakDiffCipher(),
                     "ketje" : ketje.KetjeCipher(),
                     "siphash" : siphash.SipHashCipher(),
