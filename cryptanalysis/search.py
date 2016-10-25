@@ -310,7 +310,7 @@ def solveSTP(stp_file):
     """
     Returns the solution for the given SMT problem using STP.
     """
-    stp_parameters = [PATH_STP, stp_file]
+    stp_parameters = [PATH_STP, stp_file, "--CVC"]
     result = subprocess.check_output(stp_parameters)
 
     return result.decode("utf-8")

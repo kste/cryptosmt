@@ -161,7 +161,6 @@ def getStringAdd(a, b, c, wordsize):
     command += " = 0hex{})".format("0" * (wordsize // 4))
     return command
 
-
 def getStringForAndDifferential(a, b, c):
     """
     AND = valid(x,y,out) = (x and out) or (y and out) or (not out)
