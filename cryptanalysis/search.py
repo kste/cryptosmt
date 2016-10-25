@@ -295,7 +295,7 @@ def startSATsolver(stp_file):
     """
     # Start STP to construct CNF
     subprocess.check_output([PATH_STP, "--exit-after-CNF", "--output-CNF",
-                             stp_file])
+                             stp_file, "--CVC"])
 
     # Find the number of solutions with the SAT solver
     sat_params = [PATH_CRYPTOMINISAT, "--maxsol", str(MAX_CHARACTERISTICS),
