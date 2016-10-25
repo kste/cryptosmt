@@ -320,7 +320,7 @@ def solveBoolector(stp_file):
     Returns the solution for the given SMT problem using boolector.
     """
     # Create input file with help of STP
-    stp_parameters = [PATH_STP, "--print-back-SMTLIB2", stp_file]
+    stp_parameters = [PATH_STP, "--print-back-SMTLIB2", stp_file, "--CVC"]
     input_file = subprocess.check_output(stp_parameters)
 
     boolector_parameters = [PATH_BOOLECTOR, "-x", "-m"]
