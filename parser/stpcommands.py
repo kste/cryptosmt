@@ -5,6 +5,7 @@ Provides functions for constructing the input file for STP.
 @author: stefan
 '''
 
+import itertools
 
 def blockCharacteristic(stpfile, characteristic, wordsize):
     """
@@ -184,3 +185,70 @@ def getStringRightRotate(value, rotation, wordsize):
     command = "((({0} >> {1})[{2}:0]) | (({0} << {3})[{2}:0]))".format(
         value, (rotation % wordsize), wordsize - 1, (wordsize - rotation) % wordsize)
     return command
+
+def add4bitSbox(sbox, variables):
+    """
+    Adds the constraints for the S-box and the weight
+    for the differential transition.
+
+    sbox is a list representing the S-box.
+
+    variables should be a list containing the input and
+    output variables of the S-box and the weight variables.
+
+    S(x) = y
+
+    The probability of the transitions is
+    2^-{hw(w0||w1||w2||w3)}
+
+    w ... hamming weight from the DDT table
+    """
+    assert(len(sbox) == 16)
+    assert(len(variables) == 12)
+
+    # First compute the DDT
+    DDT = [[0]*16 for i in range(16)]
+
+    for a in range(16):
+        for b in range(16):
+            DDT[a ^ b][sbox[a] ^ sbox[b]] += 1
+
+    # Construct DNF of all valid trails
+    trails = []
+
+    # All zero trail with probability 1
+    for input_diff in range(16):
+        for output_diff in range(16):
+            if DDT[input_diff][output_diff] != 0:
+                tmp = []
+                tmp.append((input_diff >> 3) & 1)
+                tmp.append((input_diff >> 2) & 1)
+                tmp.append((input_diff >> 1) & 1)
+                tmp.append((input_diff >> 0) & 1)
+                tmp.append((output_diff >> 3) & 1)
+                tmp.append((output_diff >> 2) & 1)
+                tmp.append((output_diff >> 1) & 1)
+                tmp.append((output_diff >> 0) & 1)
+                if DDT[input_diff][output_diff] == 2:
+                    tmp += [0, 1, 1, 1] # 2^-3
+                elif DDT[input_diff][output_diff] == 4:
+                    tmp += [0, 0, 1, 1] # 2^-2
+                elif DDT[input_diff][output_diff] == 8:
+                    tmp += [0, 0, 0, 1] # 2^-1
+                elif DDT[input_diff][output_diff] == 16:
+                    tmp += [0, 0, 0, 0]
+                trails.append(tmp)
+
+    # Build CNF from invalid trails
+    cnf = ""
+    for prod in itertools.product([0, 1], repeat=len(trails[0])):
+        # Trail is not valid
+        if list(prod) not in trails:
+            expr = ["~" if x == 1 else "" for x in list(prod)]
+            clause = ""
+            for literal in range(12):
+                clause += "{0}{1} | ".format(expr[literal], variables[literal])
+
+            cnf += "({}) &".format(clause[:-2])
+
+    return "ASSERT({} = 0bin1);\n".format(cnf[:-2])

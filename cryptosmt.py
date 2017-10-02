@@ -7,7 +7,7 @@ Created on Mar 28, 2014
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
                      siphash, simonrk, chaskeymachalf, simonkeyrc,
-                     ketje, ascon, salsa, chacha)
+                     ketje, ascon, salsa, chacha, skinny, gimli)
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -33,7 +33,9 @@ def startsearch(tool_parameters):
                     "chaskeyhalf" : chaskeymachalf.ChasKeyMacHalf(),
                     "ascon" : ascon.AsconCipher(),
                     "salsa" : salsa.SalsaCipher(),
-                    "chacha" : chacha.ChaChaCipher()}
+                    "chacha" : chacha.ChaChaCipher(),
+                    "skinny" : skinny.SkinnyCipher(),
+                    "gimli" : gimli.GimliCipher()}
 
     cipher = None
 
@@ -89,6 +91,7 @@ def loadparameters(args):
               "rounds" : 5,
               "mode" : 0,
               "wordsize" : 16,
+              "blocksize" : 64,
               "sweight" : 0,
               "endweight" : 1000,
               "iterative" : False,
@@ -121,6 +124,9 @@ def loadparameters(args):
 
     if args.wordsize:
         params["wordsize"] = args.wordsize[0]
+
+    if args.blocksize:
+        params["blocksize"] = args.blocksize[0]        
 
     if args.sweight:
         params["sweight"] = args.sweight[0]
@@ -171,6 +177,8 @@ def main():
                         help="The number of rounds for the cipher")
     parser.add_argument('--wordsize', nargs=1, type=int,
                         help="Wordsize used for the cipher.")
+    parser.add_argument('--blocksize', nargs=1, type=int,
+                        help="Blocksize used for the cipher.")    
     parser.add_argument('--nummessages', nargs=1, type=int,
                         help="Number of message blocks.")
     parser.add_argument('--mode', nargs=1, type=int, 
