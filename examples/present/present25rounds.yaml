@@ -1,0 +1,11 @@
+# Example input file for PRESENT64 - 25 rounds to find all characteristics 
+---
+cipher: present
+sweight: 110
+rounds: 25
+wordsize: 64
+mode: 4
+fixedVariables:
+- S0: "0x0000000F00000007"
+- S25: "0x0404040400000000"
+...

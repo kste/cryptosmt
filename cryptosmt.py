@@ -7,7 +7,8 @@ Created on Mar 28, 2014
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
                      siphash, simonrk, chaskeymachalf, simonkeyrc,
-                     ketje, ascon, salsa, chacha, skinny, gimli)
+                     ketje, ascon, salsa, chacha, skinny, gimli,
+                     present)
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -35,7 +36,8 @@ def startsearch(tool_parameters):
                     "salsa" : salsa.SalsaCipher(),
                     "chacha" : chacha.ChaChaCipher(),
                     "skinny" : skinny.SkinnyCipher(),
-                    "gimli" : gimli.GimliCipher()}
+                    "gimli" : gimli.GimliCipher(),
+                    "present" : present.PresentCipher()}
 
     cipher = None
 
