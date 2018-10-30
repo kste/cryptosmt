@@ -17,7 +17,9 @@ Ketje, Chaskey, SipHash, Salsa, ChaCha, Ascon
 
 Please note that at the moment not all features are available for all ciphers. A
 detailed description on the application of this tool on the SIMON block ciphers and
-how a differential/linear model for SIMON can be constructed is given in [1].
+how a differential/linear model for SIMON can be constructed is given in [1]. This tool 
+has also been used in [2], for finding the best differential trial and computing the more accurate differential
+probability of the best differential for several ciphers.
 
 For information on how to install CryptoSMT and a tutorial on how to use it see 
 the [project website](https://kste.dk/cryptosmt.html).
@@ -28,6 +30,7 @@ References
 ----------
 
 [1] [Observations on the SIMON block cipher family](http://eprint.iacr.org/2015/145)
+[2] [Mind the Gap - A Closer Look at the Security of Block Ciphers against Differential Cryptanalysis](https://eprint.iacr.org/2018/689)
 
 BibTex
 ----------
@@ -38,3 +41,4 @@ BibTex
     note = {\url{https://github.com/kste/cryptosmt}},
 }
 ```
+
