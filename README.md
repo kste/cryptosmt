@@ -30,6 +30,7 @@ References
 ----------
 
 [1] [Observations on the SIMON block cipher family](http://eprint.iacr.org/2015/145)
+
 [2] [Mind the Gap - A Closer Look at the Security of Block Ciphers against Differential Cryptanalysis](https://eprint.iacr.org/2018/689)
 
 BibTex
