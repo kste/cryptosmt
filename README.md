@@ -24,7 +24,7 @@ probability of the best differential for several block ciphers.
 For information on how to install CryptoSMT and a tutorial on how to use it see 
 the [project website](https://kste.dk/cryptosmt.html).
 
-## Adding a cipher to CryptoSMT's cipher suites
+## Adding a cipher to the CryptoSMT's cipher suites
 Let's say you want to add "NewCipher" to the tool:
 1. Make a copy from an example in "./ciphers/" which is similar to the design you want to analyze (for example if you want an
 ARX, Speck might be a good start) and rename it to "NewCipher.py".
