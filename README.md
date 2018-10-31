@@ -35,7 +35,7 @@ ARX, Speck might be a good start) and rename it to "NewCipher.py".
 We can describe the process of the CryptoSMT as the following steps:
 1. It creates an stp file which contains the SMT model of the differential cryptanaysis of the given cipher in CVC format (this file is placed in "./tmp/" folder)
 2. After generation of SMT model in CVC format, it calls an SMT solver to solve the generated model. The STP is used by default as SMT solver. You can also use the Boolector as SMT solver. 
-3. The first SMT model is generated with some inherent constraints which are used for modeling the differential propagation rules, and some additional constrints which are used to model the outside counditions like the fixed input/output differentials values. 
+3. The SMT model contains some inherent constraints which are used for modeling the differential propagation rules, and some additional constrints which are used to model the outside counditions like the fixed input/output differentials values. 
 4. One of the additional constraints is the starting weight (of the differential probability) constraint. The first SMT model is generated with the starting weight, and this model is changed repeatedly by increasing the weight by one, and each time, it's satisfiablity is checked by an SMT solver. The goal is to find the minimum weight which makes the model satisfiable. 
 5. If the SMT model is satisfiable for the first time, the weight (of the differential probability) which is used, is reteurned as the minimum weight (of the differential probability) as one of the output, and the process is stoped.
 
