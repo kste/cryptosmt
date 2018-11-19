@@ -85,7 +85,7 @@ def getStringForNonZero(variables, wordsize):
         command += var + "|"
 
     command = command[:-1]
-    command += ") = 0hex{}));".format("0" * (wordsize // 4))
+    command += ") = 0bin{}));".format("0" * wordsize)
     return command
 
 
@@ -130,8 +130,8 @@ def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
     Asserts that the weight is equal to the hamming weight of the
     given variables.
     """
-    if len(variables) == 1:
-        return "ASSERT({} = {});\n".format(weightVariable, variables[0])
+    # if len(variables) == 1:
+    #     return "ASSERT({} = {});\n".format(weightVariable, variables[0])
 
     command = "ASSERT(({} = BVPLUS(16,".format(weightVariable)
     for var in variables:
@@ -141,6 +141,8 @@ def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
             # probability of the characteristic.
             tmp += "0bin0000000@({0}[{1}:{1}]),".format(var, bit)
         command += tmp[:-1] + ")),"
+    if len(variables):
+        command += "0bin0000000000000000,"
     command = command[:-1]
     command += ")));"
 
@@ -159,7 +161,7 @@ def getStringAdd(a, b, c, wordsize):
         a, b, c, wordsize - 1)
     command += " & BVXOR({0}, BVXOR({1}, BVXOR({2}, ({1} << 1)[{3}:0]))))".format(
         a, b, c, wordsize - 1)
-    command += " = 0hex{})".format("0" * (wordsize // 4))
+    command += " = 0bin{})".format("0" * wordsize)
     return command
 
 def getStringForAndDifferential(a, b, c):
