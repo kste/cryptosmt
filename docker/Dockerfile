@@ -34,11 +34,5 @@ WORKDIR /home/tools/cryptosmt
 RUN apt-get install -y python3-pip
 RUN pip3 install pyyaml
 
-COPY config.py /home/tools/cryptosmt/
-COPY cryptosmt.py /home/tools/cryptosmt/
-COPY pjmask.py /home/tools/cryptosmt/ciphers/
-COPY stpcommands.py /home/tools/cryptosmt/parser/
-
-
 # Clean
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
