@@ -117,8 +117,8 @@ class SimonCipher(AbstractCipher):
         firstcheck = "({} & ~{})".format(and_out, varibits)
         secondcheck = "(BVXOR({}, {}) & {})".format(
             and_out, rotl(and_out, self.rot_alpha - self.rot_beta, wordsize), doublebits)
-        thirdcheck = "(IF {0} = 0x{1} THEN BVMOD({2}, {0}, 0x{3}2) ELSE 0x{4} ENDIF)".format(
-            x_in, "f" * (wordsize // 4), wordsize, "0" * (wordsize // 4 - 1),
+        thirdcheck = "(IF {0} = 0x{1} THEN BVMOD({2}, {3}, 0x{4}2) ELSE 0x{5} ENDIF)".format(
+            x_in, "f" * (wordsize // 4), wordsize, and_out, "0" * (wordsize // 4 - 1),
             "0" * (wordsize // 4))
 
         command += "ASSERT(({} | {} | {}) = 0x{});\n".format(
