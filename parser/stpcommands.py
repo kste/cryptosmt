@@ -140,6 +140,9 @@ def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
             # Ignore MSBs if they do not contribute to
             # probability of the characteristic.
             tmp += "0bin0000000@({0}[{1}:{1}]),".format(var, bit)
+        # Pad the constraint if necessary
+        if (wordsize - ignoreMSBs) == 1:
+            tmp += "0bin0,"
         command += tmp[:-1] + ")),"
     if len(variables):
         command += "0bin0000000000000000,"
