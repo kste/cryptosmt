@@ -1,0 +1,9 @@
+# Example input file for CRAFT to find the best single tweak differential characteristic for 2 rounds
+---
+cipher: craft
+sweight: 0
+rounds: 2
+wordsize: 64
+mode: 0
+#boolector: True
+...

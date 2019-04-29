@@ -8,7 +8,7 @@ from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
                      siphash, simonrk, chaskeymachalf, simonkeyrc,
                      ketje, ascon, salsa, chacha, skinny, gimli,
-                     present)
+                     present, craft)
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -37,7 +37,8 @@ def startsearch(tool_parameters):
                     "chacha" : chacha.ChaChaCipher(),
                     "skinny" : skinny.SkinnyCipher(),
                     "gimli" : gimli.GimliCipher(),
-                    "present" : present.PresentCipher()}
+                    "present" : present.PresentCipher(),
+                    "craft" : craft.CraftCipher()}
 
     cipher = None
 

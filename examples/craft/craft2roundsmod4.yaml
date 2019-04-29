@@ -1,0 +1,12 @@
+# Example input file for CRAFT, to find the best differential for 2 rounds
+---
+cipher: craft
+sweight: 4
+rounds: 2
+wordsize: 64
+mode: 4
+#boolector: True
+fixedVariables:
+- x0: "0x0020000000200020"
+- x2: "0x0020000000000000"
+...

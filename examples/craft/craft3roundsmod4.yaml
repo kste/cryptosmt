@@ -1,0 +1,13 @@
+# Example input file for CRAFT to find the best single tweak differential for 3 rounds
+# with fixed input and output differences
+---
+cipher: craft
+sweight: 8
+rounds: 3
+wordsize: 64
+mode: 4
+#boolector: True
+fixedVariables:
+- x0: "0x0200000022000200"
+- x3: "0x0000900000000000"
+...
