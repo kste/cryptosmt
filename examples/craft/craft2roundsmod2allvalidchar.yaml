@@ -1,0 +1,9 @@
+# Example input file for CRAFT to find all valid charachteristics for 2 rounds
+---
+cipher: craft
+sweight: 4
+rounds: 2
+wordsize: 64
+mode: 2
+#boolector: True
+...
