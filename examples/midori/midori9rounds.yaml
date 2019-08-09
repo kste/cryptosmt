@@ -1,0 +1,11 @@
+# Example input file for Midori64 - 9 rounds to find all characteristics 
+---
+cipher: midori
+sweight: 82
+rounds: 9
+wordsize: 64
+mode: 4
+fixedVariables:
+- SB0: "0x0000000A050000A0"
+- SB9: "0x770700000AAAA0AA"
+...

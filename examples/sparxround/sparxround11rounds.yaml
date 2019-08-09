@@ -1,0 +1,17 @@
+# Example input file for SPARX64 - 11 rounds to find all characteristics 
+---
+cipher: sparxround
+sweight: todo
+rounds: 11
+wordsize: 16
+mode: 4
+fixedVariables:
+- X00: "TODO"
+- X10: "TODO"
+- Y00: "TODO"
+- Y10: "TODO"
+- X011: "TODO"
+- X111: "TODO"
+- Y011: "TODO"
+- Y111: "TODO"
+...

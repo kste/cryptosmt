@@ -1,0 +1,17 @@
+# Example input file for Noekeon128 - 16 rounds to find all characteristics 
+---
+cipher: noekeon
+sweight: todo
+rounds: 16
+wordsize: 32
+mode: 4
+fixedVariables:
+- A00: "TODO"
+- A10: "TODO"
+- A20: "TODO"
+- A30: "TODO"
+- A016: "TODO"
+- A116: "TODO"
+- A216: "TODO"
+- A316: "TODO"
+...

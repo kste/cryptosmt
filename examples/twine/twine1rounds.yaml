@@ -1,0 +1,10 @@
+# Example input file for twine - 1 rounds to find all characteristics
+---
+cipher: twine
+sweight: TODO
+rounds: 1
+wordsize: 64
+mode: 4
+fixedVariables:
+- X0: "TODO"
+- X1: "TODO"

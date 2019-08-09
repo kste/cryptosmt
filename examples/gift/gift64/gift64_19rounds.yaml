@@ -1,0 +1,11 @@
+# Example input file for GIFT64 - 19 rounds to find all characteristics 
+---
+cipher: gift
+sweight: 92
+rounds: 19
+wordsize: 64
+mode: 4
+fixedVariables:
+- SC0: "0x000000E00000000C"
+- SC19: "0x0101080804040202"
+...

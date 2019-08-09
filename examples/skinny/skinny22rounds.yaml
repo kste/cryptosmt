@@ -1,0 +1,10 @@
+# Example input file for skinny - 22 rounds to find all characteristics
+---
+cipher: skinny
+sweight: 216
+rounds: 22
+wordsize: 64
+mode: 4
+fixedVariables:
+- SC0: "0x4000000000000004"
+- SC22: "0x0400440000000400"

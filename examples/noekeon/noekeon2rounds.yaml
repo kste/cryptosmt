@@ -1,0 +1,17 @@
+# Example input file for Noekeon128 - 2 rounds to find all characteristics 
+---
+cipher: noekeon
+sweight: 8
+rounds: 2
+wordsize: 32
+mode: 4
+fixedVariables:
+- A00: "0x0700070B"
+- A10: "0x0C000C0A"
+- A20: "0x07000707"
+- A30: "0x0C000C0D"
+- A02: "0x00000000"
+- A12: "0x00000004"
+- A22: "0x00000000"
+- A32: "0x00000001"
+...
