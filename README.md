@@ -112,6 +112,27 @@ These processes are almost realted to the mod0, which is used to find the best d
 
 [2] [Mind the Gap - A Closer Look at the Security of Block Ciphers against Differential Cryptanalysis](https://eprint.iacr.org/2018/689)
 
+[3] [The SIMON and SPECK Families of Lightweight Block Ciphers](https://eprint.iacr.org/2013/404)
+[4] [The SKINNY Family of Block Ciphers and its Low-Latency Variant MANTIS](https://eprint.iacr.org/2016/660)
+[5] [PRESENT: An Ultra-Lightweight Block Cipher](https://link.springer.com/chapter/10.1007/978-3-540-74735-2_31)
+[6] [Midori: A Block Cipher for Low Energy (Extended Version)](https://eprint.iacr.org/2015/1142)
+[7] [LBlock: A Lightweight Block Cipher](https://link.springer.com/chapter/10.1007/978-3-642-21554-4_19)
+[8] [Design Strategies for ARX with Provable Bounds: SPARX and LAX (Full Version)](https://eprint.iacr.org/2016/984)
+[9] [TWINE: A Lightweight Block Cipher for Multiple Platforms](https://pdfs.semanticscholar.org/26b9/d188fc506fb34247c57dc365547f961576d7.pdf)
+[10] [Nessie Proposal: NOEKEON](http://gro.noekeon.org/Noekeon-spec.pdf)
+[11] [PRINCE - A Low-latency Block Cipher for Pervasive Computing Applications (Full version)](https://eprint.iacr.org/2012/529)
+[12] [RECTANGLE: A Bit-slice Lightweight Block Cipher Suitable for Multiple Platforms](https://eprint.iacr.org/2014/084)
+[13] [CHAM: A Family of Lightweight Block Ciphers for Resource-Constrained Devices](https://link.springer.com/chapter/10.1007/978-3-319-78556-1_1)
+[14] [The Keccak reference](https://keccak.team/files/Keccak-reference-3.0.pdf)
+[15] [The Salsa20 family of stream ciphers](https://cr.yp.to/snuffle/salsafamily-20071225.pdf)
+[16] [ChaCha, a variant of Salsa20](https://cr.yp.to/chacha/chacha-20080128.pdf)
+[17] [CAESAR submission: Kђѡїђ v2](https://competitions.cr.yp.to/round3/ketjev2.pdf)
+[18] [Ascon v1.2 Submission to the CAESAR Competition](https://competitions.cr.yp.to/round3/asconv12.pdf)
+[19] [Chaskey: An Efficient MAC Algorithm for 32-bit Microcontrollers](https://eprint.iacr.org/2014/386)
+[20] [SipHash: a fast short-input PRF](https://131002.net/siphash/siphash.pdf)
+
+
+
 ## BibTex
 ```
 @misc{CryptoSMT-ref,
