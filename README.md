@@ -12,8 +12,38 @@ Some of the features are:
 * Find preimages for hash functions.
 * Recover a secret key.
 
-The following primitives are supported by CryptoSMT at the moment: Simon, Speck, Keccak,
-Ketje, Chaskey, SipHash, Salsa, ChaCha, Ascon, Gimli, Present
+The following primitives are supported by CryptoSMT at the moment: 
+
+###### Block Ciphers
+* Simon[3], 
+* Speck[3], 
+* Skinny[4],
+* Present[5],
+* Midori[6],
+* LBlock[7],
+* Sparx[8],
+* Twine[9],
+* Noekeon[10],
+* Prince[11],
+* Mantis[4],
+* Speckey[8],
+* Rectangle[12],
+* Cham[13]
+
+###### Hash Functions
+* Keccak[14]
+
+###### Stream Ciphers
+* Salsa[15], 
+* ChaCha[16]
+
+###### Authenticated Encryption Ciphers
+* Ketje[17], 
+* Ascon[18]
+
+###### Message Authentication Codes
+* Chaskey[19], 
+* SipHash[20]
 
 Please note that at the moment not all features are available for all ciphers. A
 detailed description on the application of this tool on the SIMON block ciphers and
