@@ -28,7 +28,9 @@ The following primitives are supported by CryptoSMT at the moment:
 * Mantis[4],
 * Speckey[8],
 * Rectangle[12],
-* Cham[13]
+* Cham[13],
+* CRAFT[21],
+* TRIFLE[22]
 
 ###### Hash Functions
 * Keccak[14]
@@ -126,7 +128,7 @@ ARX, Speck might be a good start) and rename it to "NewCipher.py".
 3. Update the file "cryptosmt.py": Add "NewCipher" in the import (line 8), and include it in the tool by adding it to the ciphersuite (line 25).
 4. Run "python3 cryptosmt.py --cipher NewCipher" to see if it works.
 
-## How it works?
+## How does it work?
 
 We can describe the process of the CryptoSMT as the following steps:
 1. It creates an stp file which contains the SMT model of the differential cryptanaysis of the given cipher in CVC format (this file is placed in "./tmp/" folder)
@@ -178,6 +180,9 @@ These processes are almost realted to the mod0, which is used to find the best d
 
 [20] [SipHash: a fast short-input PRF](https://131002.net/siphash/siphash.pdf)
 
+[21] [CRAFT: Lightweight Tweakable Block Cipher with Efficient Protection Against DFA Attacks](https://tosc.iacr.org/index.php/ToSC/article/view/7396)
+
+[22] [TRIFLE](https://csrc.nist.gov/CSRC/media/Projects/Lightweight-Cryptography/documents/round-1/spec-doc/trifle-spec.pdf)
 
 
 ## BibTex
