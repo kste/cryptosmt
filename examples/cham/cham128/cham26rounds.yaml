@@ -1,0 +1,16 @@
+# Example input file for cham - 26 rounds to find all characteristics
+---
+cipher: cham
+sweight: TODO
+rounds: 26
+wordsize: 32
+mode: 4
+fixedVariables:
+- X00: "TODO"
+- X10: "TODO"
+- X20: "TODO"
+- X30: "TODO"
+- X026: "TODO"
+- X126: "TODO"
+- X226: "TODO"
+- X326: "TODO"

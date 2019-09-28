@@ -1,0 +1,12 @@
+# Example input file for SIMON32 - 13 rounds to find all characteristics 
+# contributing to the probability of the differential (0, 40) ---> (4000, 0)
+---
+cipher: skinny
+sweight: 10
+rounds: 3
+wordsize: 64
+mode: 4
+fixedVariables:
+- SC0: "0x000001000010000C"
+- SC3: "0x0020002000000020"
+...

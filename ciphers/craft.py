@@ -11,7 +11,8 @@ class CraftCipher(AbstractCipher):
     """
     This class can be used to probe differential behavior of CRAFT cipher under
     sigle tweak model. In other words it can be used to find the best single tweak
-    differential trail for the given rounds.
+    differential trail for the given rounds. It also can be used to estimate the 
+    differential effect for the given rounds.
     """
 
     name = "craft"
@@ -22,6 +23,27 @@ class CraftCipher(AbstractCipher):
     # CRAFTS's PermuteNibble lookup table
     PN = [0xf, 0xc, 0xd, 0xe, 0xa, 0x9, 0x8, 0xb,
           0x6, 0x5, 0x4, 0x7, 0x1, 0x2, 0x3, 0x0]
+    # reduced product of sum representation of ddt of craft's sbox
+    # ddt is considered as a boolean function like this ddt(di, do, p) = b in {0, 1}
+    # for example ddt(0, 0, 0) = 1
+    craft_sbox_rpos = "(~a1 | a0 | b2 | ~b1 | ~p2) & (a2 | ~a1 | ~b1 | b0 | ~p2) & (a3 | a2 | a1 | ~b3 | ~b0) & (~a3 | ~a0 | b3 | b2 | b1) & (a3 | a1 | a0 | ~b3 | ~b2) & (~a3 | ~a2 | b3 | b1 | b0) & (a2 | ~a1 | b2 | ~b1 | ~p2) & (~a1 | a0 | ~b1 | b0 | ~p2) & (~a2 | ~a0 | ~b2 | ~b0 | ~p2) & (a1 | ~b3 | ~b2 | ~b0) & (~a3 | ~a2 | ~a0 | b1) & (p1 | ~p0) & (~p2 | p0) & (~b1 | p0) & (a2 | ~a0 | b1 | p2) & (a1 | ~b2 | b0 | p2) & (~b3 | p0) & (b2 | ~b1 | b0 | ~p2) & (a1 | b1 | ~b0 | p2) & (~a2 | a0 | b1 | p2) & (~a3 | b1 | b0 | p2) & (~a2 | ~a0 | b3 | b0 | p2) & (~a1 | p0) & (a2 | a0 | b2 | b1 | b0 | ~p1) & (a2 | a1 | a0 | p2 | ~p0) & (~a2 | a0 | ~b2 | ~b0 | p2) & (a1 | b2 | ~b0 | p2) & (a2 | a0 | ~b2 | ~b0 | ~p2) & (~a2 | ~a0 | b2 | ~b0 | p2) & (~a3 | a0 | b2 | ~b0 | p2) & (a3 | ~a1 | ~b3 | ~b1 | p2) & (a2 | ~a0 | ~b2 | ~b0 | p2) & (~a1 | b3 | ~b2 | ~b1 | ~b0 | p2) & (a2 | ~a1 | b3 | b2 | ~b1) & (~a1 | a0 | b3 | ~b2 | b1 | ~p2) & (a2 | ~a1 | b3 | b1 | ~b0 | ~p2) & (a1 | ~b2 | ~b1 | ~b0 | ~p2) & (b3 | b2 | b0 | ~p2) & (a3 | a2 | a0 | ~p2) & (~a2 | ~a1 | ~a0 | b1 | ~p2) & (~a3 | a2 | ~a0 | ~b2 | ~b1 | b0) & (a2 | a0 | ~b2 | ~b1 | b0 | p2) & (~a2 | ~a1 | a0 | b3 | b0) & (~a2 | a0 | ~b3 | b2 | p2) & (a2 | ~a0 | ~b3 | b0 | p2) & (~a1 | a0 | ~b3 | b2 | ~b0 | ~p2) & (a2 | ~a1 | ~b3 | ~b2 | b0 | ~p2) & (~a0 | ~b3 | ~b2 | b0 | p2) & (a3 | ~a2 | a1 | ~b1 | b0 | ~p2) & (a3 | a1 | ~a0 | b2 | ~b1 | ~p2) & (~a2 | ~a0 | b2 | b1 | b0) & (a3 | a2 | ~b2 | ~b0 | p2) & (~a3 | ~a2 | a1 | a0 | b3 | b2 | ~p2) & (a3 | a1 | a0 | ~b3 | b1 | ~b0) & (a3 | a2 | a1 | ~b3 | ~b2 | b1) & (~a3 | a1 | ~a0 | b3 | b1 | b0) & (~a3 | ~a2 | a0 | b2 | ~b1 | ~b0)"    
+
+    def constraints_by_craft_sbox(self, variables):
+        """
+        generate constarints related to sbox
+        """
+        di = variables[0:4]
+        do = variables[4:8]        
+        w = variables[9:12]        
+        command = self.craft_sbox_rpos
+        for i in range(4):
+            command = command.replace("a%d" % (3 - i), di[i])
+            command = command.replace("b%d" % (3 - i), do[i])            
+            if i <= 2:
+               command = command.replace("p%d" % (2 - i), w[i])            
+        command = "ASSERT(%s = 0bin1);\n" % command
+        command += "ASSERT(%s = 0bin0);\n" % variables[8]        
+        return command
 
     def getFormatString(self):
         """
@@ -81,15 +103,15 @@ class CraftCipher(AbstractCipher):
                                      w[i], wordsize)
 
             # No all zero characteristic
-            stpcommands.assertNonZero(stp_file, x, wordsize)
+            stpcommands.assertNonZero(stp_file, [x[0]], wordsize)
 
             # Iterative characteristics only
             # Input difference = Output difference
             if parameters["iterative"]:
-                stpcommands.assertVariableValue(stp_file, x[0], x[rounds])
-
+                stpcommands.assertVariableValue(stp_file, x[0], x[rounds])                
+                
             for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
+                stpcommands.assertVariableValue(stp_file, key, value)                                
 
             for char in parameters["blockedCharacteristics"]:
                 stpcommands.blockCharacteristic(stp_file, char, wordsize)
@@ -135,8 +157,8 @@ class CraftCipher(AbstractCipher):
         for i in range(16):
             command += "ASSERT(" + z + "[%d:%d]" % (4*i + 3, 4*i) + \
                 " = " + y + "[%d:%d]" % (4*self.PN[i] + 3,
-                                         4*self.PN[i]) + ");\n"        
-        # Sbox layer
+                                         4*self.PN[i]) + ");\n"
+        # Sbox layer        
         for i in range(16):
             variables = ["{0}[{1}:{1}]".format(z, 4*i + 3),
                          "{0}[{1}:{1}]".format(z, 4*i + 2),
@@ -149,9 +171,8 @@ class CraftCipher(AbstractCipher):
                          "{0}[{1}:{1}]".format(w, 4*i + 3),
                          "{0}[{1}:{1}]".format(w, 4*i + 2),
                          "{0}[{1}:{1}]".format(w, 4*i + 1),
-                         "{0}[{1}:{1}]".format(w, 4*i + 0)]
-            # print(variables)
-            command += stpcommands.add4bitSbox(self.craft_sbox, variables)
-
+                         "{0}[{1}:{1}]".format(w, 4*i + 0)]            
+            #command += stpcommands.add4bitSbox(self.craft_sbox, variables)        
+            command += self.constraints_by_craft_sbox(variables)
         stp_file.write(command)
         return

@@ -1,0 +1,16 @@
+# Example input file for cham - 23 rounds to find all characteristics
+---
+cipher: cham
+sweight: 28
+rounds: 23
+wordsize: 16
+mode: 4
+fixedVariables:
+- X00: "0xC810"
+- X10: "0x2400"
+- X20: "0x0020"
+- X30: "0x0010"
+- X023: "0x4001"
+- X123: "0xA140"
+- X223: "0x0001"
+- X323: "0x0280"

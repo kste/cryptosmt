@@ -1,0 +1,10 @@
+# Example input file for rectangle - 24 rounds to find all characteristics
+---
+cipher: rectangle
+sweight: TODO
+rounds: 24
+wordsize: 64
+mode: 4
+fixedVariables:
+- SC0: "TODO"
+- SC24: "TODO"

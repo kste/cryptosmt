@@ -1,0 +1,41 @@
+# Example input file for 0-round PRINCE (just the middle round)
+---
+cipher: prince
+sweight: 8
+rounds: 1
+wordsize: 4
+mode: 4
+fixedVariables:
+- SB0r0: "0x0"
+- SB1r0: "0x0"
+- SB2r0: "0x0"
+- SB3r0: "0x0"
+- SB4r0: "0x0"
+- SB5r0: "0x0"
+- SB6r0: "0x0"
+- SB7r0: "0x0"
+- SB8r0: "0x0"
+- SB9r0: "0x0"
+- SB10r0: "0x0"
+- SB11r0: "0x0"
+- SB12r0: "0x0"
+- SB13r0: "0x1"
+- SB14r0: "0x0"
+- SB15r0: "0x0"
+- SB0r1: "0x0"
+- SB1r1: "0x0"
+- SB2r1: "0x0"
+- SB3r1: "0x0"
+- SB4r1: "0x0"
+- SB5r1: "0x0"
+- SB6r1: "0x0"
+- SB7r1: "0x0"
+- SB8r1: "0x0"
+- SB9r1: "0x0"
+- SB10r1: "0x0"
+- SB11r1: "0x0"
+- SB12r1: "0x1"
+- SB13r1: "0x0"
+- SB14r1: "0xC"
+- SB15r1: "0xC"
+...

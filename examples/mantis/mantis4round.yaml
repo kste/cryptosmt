@@ -1,0 +1,72 @@
+# Example input file for 4-round MANTIS
+---
+cipher: mantis
+sweight: 28
+rounds: 5
+wordsize: 4
+mode: 4
+fixedVariables:
+- SB0r0: "0x0"
+- SB1r0: "0x0"
+- SB2r0: "0x0"
+- SB3r0: "0x0"
+- SB4r0: "0x0"
+- SB5r0: "0xA"
+- SB6r0: "0x0"
+- SB7r0: "0x0"
+- SB8r0: "0x0"
+- SB9r0: "0x0"
+- SB10r0: "0x0"
+- SB11r0: "0xA"
+- SB12r0: "0xA"
+- SB13r0: "0x0"
+- SB14r0: "0x0"
+- SB15r0: "0x0"
+- SB0r5: "0x0"
+- SB1r5: "0xA"
+- SB2r5: "0x0"
+- SB3r5: "0x0"
+- SB4r5: "0x0"
+- SB5r5: "0x0"
+- SB6r5: "0x0"
+- SB7r5: "0x0"
+- SB8r5: "0xA"
+- SB9r5: "0x0"
+- SB10r5: "0x0"
+- SB11r5: "0x0"
+- SB12r5: "0x0"
+- SB13r5: "0x0"
+- SB14r5: "0x0"
+- SB15r5: "0xA"
+...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

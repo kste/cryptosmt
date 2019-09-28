@@ -1,0 +1,14 @@
+# Example input file for SPARX64 - 4 rounds with 2-active output bits
+---
+cipher: sparxround
+sweight: 0
+rounds: 4
+wordsize: 16
+mode: 1
+fixedVariables:
+- X04: "0x0200"
+- X14: "0x2000"
+- Y04: "0x0000"
+- Y14: "0x0000"
+...
+

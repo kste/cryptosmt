@@ -1,0 +1,11 @@
+# Example input file for GIFT128 - 7 rounds to find all characteristics 
+---
+cipher: gift
+sweight: 29
+rounds: 7
+wordsize: 128
+mode: 4
+fixedVariables:
+- SC0: "0x0000000000000000000A00000CC00000"
+- SC7: "0x04000104020008000000000100000200"
+...

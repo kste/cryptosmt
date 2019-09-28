@@ -1,0 +1,13 @@
+# Example input file for LBLOCK64 - 21 rounds to find all characteristics 
+---
+cipher: lblock
+sweight: 96
+rounds: 21
+wordsize: 32
+mode: 4
+fixedVariables:
+- X0: "0x00000000"
+- Y0: "0x00A0A700"
+- X21: "0x0120B000"
+- Y21: "0x20000000"
+...

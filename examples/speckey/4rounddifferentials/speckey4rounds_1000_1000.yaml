@@ -1,0 +1,12 @@
+# Example input file for SPECKEY32 - 4 rounds to find all characteristics
+# that have the right branch after 4 rounds zero 
+---
+cipher: speckey
+sweight: 5
+rounds: 4
+wordsize: 16
+mode: 1
+fixedVariables:
+- x4: "0x1000"
+- y4: "0x1000"
+...

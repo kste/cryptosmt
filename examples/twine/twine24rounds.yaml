@@ -1,0 +1,10 @@
+# Example input file for twine - 24 rounds to find all characteristics
+---
+cipher: twine
+sweight: 113
+rounds: 24
+wordsize: 64
+mode: 4
+fixedVariables:
+- X0: "0xA0C700A000970000"
+- X24: "0x02575000A2000000"

@@ -1,0 +1,10 @@
+# Example input file for rectangle - 2 rounds to find all characteristics
+---
+cipher: rectangle
+sweight: 4
+rounds: 2
+wordsize: 64
+mode: 4
+fixedVariables:
+- SC0: "0x0000000100010001"
+- SC2: "0x4000200000000002"

@@ -1,0 +1,25 @@
+# Example input file for SPARX128 - 5 rounds to find all characteristics 
+---
+cipher: sparxround128
+sweight: 9
+rounds: 5
+wordsize: 16
+mode: 4
+fixedVariables:
+- X0L0: "0x0000"
+- X0R0: "0x0000"
+- X1L0: "0x0000"
+- X1R0: "0x0000"
+- X2L0: "0x0000"
+- X2R0: "0x0000"
+- X3L0: "0x0211"
+- X3R0: "0x0A04"
+- X0L5: "0x0000"
+- X0R5: "0x0000"
+- X1L5: "0x8000"
+- X1R5: "0x840A"
+- X2L5: "0x0000"
+- X2R5: "0x0000"
+- X3L5: "0x0000"
+- X3R5: "0x0000"
+...

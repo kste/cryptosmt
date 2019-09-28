@@ -1,0 +1,10 @@
+# Example input file for skinny - 35 rounds to find all characteristics
+---
+cipher: skinny
+sweight: TODO
+rounds: 35
+wordsize: 64
+mode: 4
+fixedVariables:
+- SC0: "TODO"
+- SC35: "TODO"

@@ -1,0 +1,17 @@
+# Example input file for SPARX64 - 6 rounds to find all characteristics 
+---
+cipher: sparxround
+sweight: 14
+rounds: 6
+wordsize: 16
+mode: 4
+fixedVariables:
+- X00: "0x0000"
+- X10: "0x0000"
+- Y00: "0x0211"
+- Y10: "0x0A04"
+- X06: "0xAF0A"
+- X16: "0xBF20"
+- Y06: "0x851A"
+- Y16: "0x9530"
+...

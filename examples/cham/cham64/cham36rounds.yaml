@@ -1,0 +1,17 @@
+# Example input file for cham - 36 rounds to find all characteristics
+# best differential trail by designers
+---
+cipher: cham
+sweight: 63
+rounds: 36
+wordsize: 16
+mode: 4
+fixedVariables:
+- X00: "0x0004"
+- X10: "0x0408"
+- X20: "0x0A00"
+- X30: "0x0000"
+- X036: "0x0005"
+- X136: "0x8502"
+- X236: "0x0004"
+- X336: "0x0A00"

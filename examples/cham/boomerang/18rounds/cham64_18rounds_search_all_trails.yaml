@@ -1,0 +1,7 @@
+# Example input file for cham - 18 rounds to find all characteristics
+---
+cipher: cham
+sweight: 16
+rounds: 18
+wordsize: 16
+mode: 2
