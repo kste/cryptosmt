@@ -1,5 +1,4 @@
 # CryptoSMT
-=========
 
 CryptoSMT is an easy to use tool for cryptanalysis of symmetric primitives likes 
 block ciphers or hash functions. It is based on SMT/SAT solvers like STP, Boolector, 
@@ -138,6 +137,10 @@ We can describe the process of the CryptoSMT as the following steps:
 5. If the SMT model is satisfiable for the first time, the weight (of the differential probability) which is used, is reteurned as the minimum weight (of the differential probability) as one of the output, and the process is stoped.
 
 These processes are almost realted to the mod0, which is used to find the best differential with maximum (minimum) differential probablity (weight).
+
+## Credits
+
+Special thanks to [Ralph Ankele](https://github.com/TheBananaMan) and [Hosein Hadipour](https://github.com/hadipourh) for their extensive contributions!
 
 ## References
 [1] [Observations on the SIMON block cipher family](http://eprint.iacr.org/2015/145)
