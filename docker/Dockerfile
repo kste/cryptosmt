@@ -1,7 +1,7 @@
-FROM debian:stretch-slim
+FROM debian:latest
 
 # Install all packages
-RUN apt-get update && apt-get install -y git build-essential cmake
+RUN apt-get update && apt-get install -y git build-essential cmake wget curl
 
 WORKDIR /home/tools/
 RUN git clone https://github.com/niklasso/minisat && \
@@ -28,7 +28,7 @@ RUN cmake ../ && make && make install
 
 WORKDIR /home/tools/boolector
 RUN ./contrib/setup-lingeling.sh && ./contrib/setup-btor2tools.sh
-RUN ./configure.sh && cd build && make && make install
+RUN ./configure.sh --no-minisat --no-cms && cd build && make && make install
 
 WORKDIR /home/tools/cryptosmt
 RUN apt-get install -y python3-pip
