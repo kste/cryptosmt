@@ -31,6 +31,7 @@ class CraftCipherLinear(AbstractCipher):
         """
         generate constarints related to sbox
         """
+
         di = variables[0:4]
         do = variables[4:8]
         w = variables[8:12]
@@ -46,6 +47,7 @@ class CraftCipherLinear(AbstractCipher):
         """
         Returns the print format.
         """
+
         return ['x', 'y', 'z', 'w']
 
     def createSTP(self, stp_filename, parameters):
@@ -81,6 +83,7 @@ class CraftCipherLinear(AbstractCipher):
             It is supposed that the input difference is as bellow:
             [x[3:0], x[7:4], ..., x[63:60]]            
             """
+
             # note that the last integer index in the name of a variable \
             # always shows the round's number in the CryptoSMT
             x = ["x%d" % i for i in range(rounds + 1)]
@@ -121,6 +124,7 @@ class CraftCipherLinear(AbstractCipher):
         """
         Model for single tweak differential behaviour of CRAFT
         """
+
         command = ""
         """
         MixColumn
@@ -170,7 +174,7 @@ class CraftCipherLinear(AbstractCipher):
                          "{0}[{1}:{1}]".format(w, 4*i + 1),
                          "{0}[{1}:{1}]".format(w, 4*i + 0)]
             # print(variables)
-            #command += stpcommands.add4bitSbox(self.craft_sbox, variables)
+            # command += stpcommands.add4bitSbox(self.craft_sbox, variables)
             command += self.constraints_by_craft_sbox(variables)
 
         stp_file.write(command)
