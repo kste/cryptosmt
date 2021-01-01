@@ -7,7 +7,7 @@ Created on Mar 28, 2014
 from cryptanalysis import search
 from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
                      siphash, simonrk, chaskeymachalf, simonkeyrc,
-                     ketje, ascon, salsa, chacha, skinny, gimli,
+                     ketje, ascon, salsa, chacha, skinny, skinnyrk, gimli,
                      present, craft, craftlinear, trifle, trifle, triflerk)
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
 
@@ -36,6 +36,7 @@ def startsearch(tool_parameters):
                     "salsa" : salsa.SalsaCipher(),
                     "chacha" : chacha.ChaChaCipher(),
                     "skinny" : skinny.SkinnyCipher(),
+                    "skinnyrk" : skinnyrk.SkinnyRKCipher(),
                     "gimli" : gimli.GimliCipher(),
                     "present" : present.PresentCipher(),
                     "craft" : craft.CraftCipher(),
