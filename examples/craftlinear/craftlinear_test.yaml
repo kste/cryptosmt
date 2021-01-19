@@ -1,0 +1,12 @@
+# Input file for CRAFT to find the best linear trail covering 4 rounds
+---
+cipher: craftlinear
+sweight: 0
+rounds: 4
+wordsize: 64
+mode: 0
+#latex: True
+# iterative: True
+#boolector: True
+#fixedVariables:
+#...
