@@ -50,8 +50,6 @@ Please note that at the moment not all features are available for all ciphers. A
 detailed description on the application of this tool on the SIMON block ciphers and
 how a differential/linear model for SIMON can be constructed is given in [1].
 
-You can find some additional information on the [project website](https://kste.dk/cryptosmt.html).
-
 ## Installation
 
 CryptoSMT requires you to have [STP](https://github.com/stp/stp) and
