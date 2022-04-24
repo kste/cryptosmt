@@ -4,7 +4,7 @@ FROM debian:latest
 RUN apt-get update && apt-get install -y git build-essential cmake wget curl
 
 WORKDIR /home/tools/
-RUN git clone https://github.com/niklasso/minisat && \
+RUN git clone https://github.com/agurfinkel/minisat && \
     git clone https://github.com/msoos/cryptominisat && \
     git clone https://github.com/stp/stp && \
     git clone https://github.com/Boolector/boolector && \
