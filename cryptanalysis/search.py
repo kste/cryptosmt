@@ -14,8 +14,6 @@ import math
 import os
 import time
 
-from fractions import gcd
-
 
 def computeProbabilityOfDifferentials(cipher, parameters):
     """
@@ -100,7 +98,7 @@ def findBestConstants(cipher, parameters):
                                                              beta])
                 continue
             #Filter gcd(alpha - beta, n) != 1 cases
-            if gcd(alpha - beta, wordsize) != 1:
+            if math.gcd(alpha - beta, wordsize) != 1:
                 constantMinWeights.append(1)
                 continue
 
