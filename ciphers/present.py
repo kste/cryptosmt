@@ -2,6 +2,8 @@
 Created on Dec 27, 2016
 
 @author: ralph
+@modifed by Hosein Hadipour on Jun 12, 2022: 
+Speeding up the tool by using an optimized S-box encoding
 '''
 
 from parser import stpcommands
@@ -10,11 +12,29 @@ from ciphers.cipher import AbstractCipher
 
 class PresentCipher(AbstractCipher):
     """
-    Represents the differential behaviour of PRESENT and can be used
+    Represents the differential behavior of PRESENT and can be used
     to find differential characteristics for the given parameters.
     """
 
     name = "present"
+    present_sbox_rpos = "(p1 | ~p0) & (~a3 | p0) & (~a2 | p0) & (~a1 | p0) & (~a0 | p0) & (a3 | a2 | a1 | ~p2) & (a0 | b3 | b1 | ~p2) & (a0 | b3 | ~b1 | p2) & (a0 | ~b3 | b1 | p2) & (~a3 | ~a1 | ~a0 | b3 | ~b1) & (~a2 | ~a1 | a0 | b3 | b1) & (~a3 | a2 | a1 | a0 | b0) & (~a2 | ~a1 | b3 | b1 | ~p2) & (b3 | ~b2 | b1 | ~b0 | ~p2) & (~a2 | a1 | a0 | b2 | p2) & (~a3 | ~a1 | a0 | ~b1 | p2) & (a3 | a2 | ~b3 | ~b1 | p2) & (~a2 | ~a1 | b3 | ~b1 | p2) & (~a2 | a1 | ~a0 | ~b0 | p2) & (a2 | ~a1 | b2 | ~b0 | p2) & (a3 | ~a1 | ~b3 | b0 | p2) & (a3 | a1 | ~b1 | b0 | p2) & (b3 | b2 | b1 | b0 | ~p0) & (a3 | ~a2 | a1 | ~a0 | b3 | ~b1) & (a2 | ~a1 | a0 | ~b3 | b2 | ~b0) & (a2 | ~a1 | a0 | ~b2 | ~b1 | ~b0) & (~a2 | a1 | a0 | b2 | ~b1 | ~b0) & (a3 | ~a1 | ~a0 | ~b3 | b1 | ~b0) & (~a3 | a2 | a0 | ~b2 | b1 | b0) & (a3 | a2 | ~b3 | b2 | b1 | ~p2) & (~a1 | ~a0 | b3 | ~b2 | ~b0 | p2) & (a2 | a1 | b3 | b1 | ~b0 | p2) & (~a3 | ~a2 | a1 | ~b2 | b0 | p2) & (a2 | a1 | b3 | ~b1 | b0 | p2) & (a3 | b3 | ~b2 | b1 | b0 | p2) & (a3 | a1 | b2 | b1 | b0 | ~p1) & (a3 | a2 | b3 | b2 | b0 | ~p0) & (a3 | a1 | b3 | b2 | b0 | ~p0) & (~a3 | ~a2 | a1 | b3 | ~b2 | ~b1 | b0) & (~a3 | a2 | ~a1 | a0 | b3 | ~b2 | ~p2) & (~a3 | ~a2 | a1 | a0 | ~b2 | b1 | ~p2) & (~a2 | a1 | ~a0 | b3 | ~b1 | b0 | ~p2) & (a2 | ~a1 | ~a0 | ~b2 | ~b1 | b0 | ~p2) & (a2 | ~a1 | ~a0 | ~b3 | b1 | b0 | ~p2) & (~a2 | a1 | ~a0 | ~b3 | b1 | b0 | ~p2) & (~a3 | ~a2 | ~a0 | ~b3 | b1 | ~p1 | ~p0) & (~a3 | a2 | a1 | ~a0 | ~b0 | ~p1 | ~p0) & (~a2 | ~a1 | ~b3 | ~b1 | ~p2 | ~p1 | ~p0) & (~a0 | ~b3 | ~b2 | ~b1 | ~p2 | ~p1 | ~p0) & (a3 | ~a2 | ~a1 | ~b0 | ~p2 | ~p1 | ~p0) & (~a0 | ~b3 | b2 | ~b1 | p2 | ~p1 | ~p0) & (~a2 | a1 | a0 | ~b3 | ~b2 | ~b0 | ~p1 | ~p0) & (~a3 | a2 | a1 | ~b3 | ~b1 | ~p2 | ~p1 | ~p0) & (~a3 | a2 | ~a1 | ~a0 | ~b2 | p2 | ~p1 | ~p0) & (a2 | a1 | ~a0 | ~b3 | b1 | b0 | p2 | ~p1 | ~p0) & (a2 | a1 | b3 | b1 | ~p2)"
+
+    def constraints_by_present_sbox(self, variables):
+        """
+        generate constraints for S-box
+        """
+        di = variables[0:4]
+        do = variables[4:8]        
+        w = variables[9:12]        
+        command = self.present_sbox_rpos
+        for i in range(4):
+            command = command.replace("a%d" % (3 - i), di[i])
+            command = command.replace("b%d" % (3 - i), do[i])            
+            if i <= 2:
+               command = command.replace("p%d" % (2 - i), w[i])            
+        command = "ASSERT(%s = 0bin1);\n" % command
+        command += "ASSERT(%s = 0bin0);\n" % variables[8]        
+        return command
 
     def getFormatString(self):
         """
@@ -104,7 +124,8 @@ class PresentCipher(AbstractCipher):
                          "{0}[{1}:{1}]".format(w, 4*i + 2),
                          "{0}[{1}:{1}]".format(w, 4*i + 1),
                          "{0}[{1}:{1}]".format(w, 4*i + 0)]
-            command += stpcommands.add4bitSbox(present_sbox, variables)
+            # command += stpcommands.add4bitSbox(present_sbox, variables)
+            command += self.constraints_by_present_sbox(variables)
 
 
         stp_file.write(command)
