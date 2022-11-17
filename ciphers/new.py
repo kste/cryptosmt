@@ -16,7 +16,7 @@ class NewCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "simon"
+    name = "new"
     rot_alpha = 8
     rot_beta = 1
     rot_gamma = 2
