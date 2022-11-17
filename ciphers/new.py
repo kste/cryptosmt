@@ -10,7 +10,7 @@ from ciphers.cipher import AbstractCipher
 from parser.stpcommands import getStringLeftRotate as rotl
 
 
-class SimonCipher(AbstractCipher):
+class NewCipher(AbstractCipher):
     """
     Represents the differential behaviour of SIMON and can be used
     to find differential characteristics for the given parameters.
