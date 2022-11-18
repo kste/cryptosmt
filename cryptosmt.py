@@ -5,7 +5,7 @@ Created on Mar 28, 2014
 '''
 
 from cryptanalysis import search
-from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
+from ciphers import (new, simon, speck, simonlinear, keccak, keccakdiff,
                      siphash, simonrk, chaskeymachalf, simonkeyrc,
                      ketje, ascon, salsa, chacha, skinny, skinnyrk, gimli,
                      present, craft, craftlinear, trifle, trifle, triflerk)
@@ -22,7 +22,8 @@ def startsearch(tool_parameters):
     Starts the search tool for the given parameters
     """
 
-    cipher_suite = {"simon" : simon.SimonCipher(),
+    cipher_suite = {"new" : new.NewCipher(),
+                    "simon" : simon.SimonCipher(),
                     "speck" : speck.SpeckCipher(),
                     "simonlinear" : simonlinear.SimonLinearCipher(),
                     "keccak" : keccak.KeccakCipher(),
