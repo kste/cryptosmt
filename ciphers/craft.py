@@ -30,7 +30,7 @@ class CraftCipher(AbstractCipher):
 
     def constraints_by_craft_sbox(self, variables):
         """
-        generate constarints related to sbox
+        generate constraints for S-box
         """
         di = variables[0:4]
         do = variables[4:8]        
@@ -158,7 +158,7 @@ class CraftCipher(AbstractCipher):
             command += "ASSERT(" + z + "[%d:%d]" % (4*i + 3, 4*i) + \
                 " = " + y + "[%d:%d]" % (4*self.PN[i] + 3,
                                          4*self.PN[i]) + ");\n"
-        # Sbox layer        
+        # Sbox layer     
         for i in range(16):
             variables = ["{0}[{1}:{1}]".format(z, 4*i + 3),
                          "{0}[{1}:{1}]".format(z, 4*i + 2),
