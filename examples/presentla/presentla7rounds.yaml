@@ -1,0 +1,11 @@
+# Example input file for PRESENT64 - 7 rounds to find all linear characteristics 
+---
+cipher: presentla
+sweight: 24
+rounds: 7
+wordsize: 64
+mode: 4
+fixedVariables:
+- S0: "0xCC00000000000000"
+- S7: "0x0080008000800080"
+...
