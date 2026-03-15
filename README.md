@@ -77,13 +77,13 @@ which gives you a ready to use setup of CryptoSMT.
 CryptoSMT supports multiple SMT solvers for finding characteristics. While STP is the default, both Boolector and Bitwuzla often provide significant performance improvements for deeper searches.
 
 ### Supported Solvers:
-*   **STP (Default):** Reliable and widely used for many primitives.
+*   **STP (Default):** The original solver integrated in CryptoSMT.
 *   **Boolector:** Often much faster than STP for bit-vector problems. Use with `--boolector`.
 *   **Bitwuzla:** The successor to Boolector, generally offering the best performance. Use with `--bitwuzla`.
 
 ### Benchmarks (SIMON-32/64, 10 rounds)
 
-The following table compares the performance of the three solvers when searching for the minimum weight characteristic for 10 rounds of SIMON-32/64:
+The following table compares the performance (on a Macbook Pro M5) of the three solvers when searching for the minimum weight characteristic for 10 rounds of SIMON-32/64:
 
 | Solver | Weight Found | Time Taken | Performance vs STP |
 | :--- | :---: | :---: | :---: |
