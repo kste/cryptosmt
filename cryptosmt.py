@@ -118,7 +118,7 @@ def loadparameters(args):
     # Check if there is an input file specified
     if args.inputfile:
         with open(args.inputfile[0], 'r') as input_file:
-            doc = yaml.load(input_file)
+            doc = yaml.load(input_file, Loader=yaml.SafeLoader)
             params.update(doc)
             if "fixedVariables" in doc:
                 fixed_vars = {}
