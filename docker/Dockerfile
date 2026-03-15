@@ -25,7 +25,9 @@ RUN apt-get update && apt-get install -y \
     g++ \
     pkg-config \
     cryptominisat \
-    boolector
+    boolector \
+    meson \
+    ninja-build
 
 WORKDIR /home/tools/
 
@@ -48,6 +50,14 @@ RUN git clone https://github.com/stp/stp && \
     cp lib/libabc-pic.so /usr/local/lib/ && \
     ldconfig
 
+# Build Bitwuzla
+RUN git clone https://github.com/bitwuzla/bitwuzla && \
+    cd bitwuzla && \
+    git submodule update --init --recursive && \
+    ./configure.py && \
+    cd build && \
+    ninja install
+
 RUN ldconfig
 
 # Copy local code
@@ -57,6 +67,7 @@ COPY . .
 # Update config.py to use system paths
 RUN sed -i 's|PATH_STP = .*|PATH_STP = "/usr/local/bin/stp"|' config.py && \
     sed -i 's|PATH_CRYPTOMINISAT = .*|PATH_CRYPTOMINISAT = "/usr/bin/cryptominisat5"|' config.py && \
-    sed -i 's|PATH_BOOLECTOR = .*|PATH_BOOLECTOR = "/usr/bin/boolector"|' config.py
+    sed -i 's|PATH_BOOLECTOR = .*|PATH_BOOLECTOR = "/usr/bin/boolector"|' config.py && \
+    sed -i 's|PATH_BITWUZLA = .*|PATH_BITWUZLA = "/usr/local/bin/bitwuzla"|' config.py
 
 ENTRYPOINT ["python3", "cryptosmt.py"]

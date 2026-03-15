@@ -5,7 +5,7 @@ Created on Apr 3, 2014
 '''
 
 from parser import parsesolveroutput
-from config import (PATH_STP, PATH_BOOLECTOR, PATH_CRYPTOMINISAT, MAX_WEIGHT,
+from config import (PATH_STP, PATH_BOOLECTOR, PATH_BITWUZLA, PATH_CRYPTOMINISAT, MAX_WEIGHT,
                     MAX_CHARACTERISTICS)
 
 import subprocess
@@ -112,6 +112,8 @@ def findBestConstants(cipher, parameters):
                 result = ""
                 if parameters["boolector"]:
                     result = solveBoolector(stp_file)
+                elif parameters["bitwuzla"]:
+                    result = solveBitwuzla(stp_file)
                 else:
                     result = solveSTP(stp_file)
 
@@ -153,6 +155,8 @@ def findMinWeightCharacteristic(cipher, parameters):
         result = ""
         if parameters["boolector"]:
             result = solveBoolector(stp_file)
+        elif parameters["bitwuzla"]:
+            result = solveBitwuzla(stp_file)
         else:
             result = solveSTP(stp_file)
 
@@ -169,6 +173,9 @@ def findMinWeightCharacteristic(cipher, parameters):
             characteristic = ""
             if parameters["boolector"]:
                 characteristic = parsesolveroutput.getCharBoolectorOutput(
+                    result, cipher, parameters["rounds"])
+            elif parameters["bitwuzla"]:
+                characteristic = parsesolveroutput.getCharBitwuzlaOutput(
                     result, cipher, parameters["rounds"])
             else:
                 characteristic = parsesolveroutput.getCharSTPOutput(
@@ -211,6 +218,8 @@ def findAllCharacteristics(cipher, parameters):
         result = ""
         if parameters["boolector"]:
             result = solveBoolector(stp_file)
+        elif parameters["bitwuzla"]:
+            result = solveBitwuzla(stp_file)
         else:
             result = solveSTP(stp_file)
 
@@ -225,6 +234,9 @@ def findAllCharacteristics(cipher, parameters):
             characteristic = ""
             if parameters["boolector"]:
                 characteristic = parsesolveroutput.getCharBoolectorOutput(
+                    result, cipher, parameters["rounds"])
+            elif parameters["bitwuzla"]:
+                characteristic = parsesolveroutput.getCharBitwuzlaOutput(
                     result, cipher, parameters["rounds"])
             else:
                 characteristic = parsesolveroutput.getCharSTPOutput(
@@ -327,11 +339,49 @@ def solveBoolector(stp_file):
                                          stdin=subprocess.PIPE)
 
     result = boolector_process.communicate(input=input_file)[0]
+    decoded_result = result.decode("utf-8")
 
-    return result.decode("utf-8")
+    return decoded_result
+
+def solveBitwuzla(stp_file):
+    """
+    Returns the solution for the given SMT problem using bitwuzla.
+    """
+    # Create input file with help of STP
+    stp_parameters = [PATH_STP, "--print-back-SMTLIB2", stp_file, "--CVC"]
+    input_file = subprocess.check_output(stp_parameters)
+
+    # Bitwuzla requires (check-sat) and (get-model)
+    if b"(check-sat)" not in input_file:
+        input_file += b"\n(check-sat)\n"
+    if b"(get-model)" not in input_file:
+        input_file += b"\n(get-model)\n"
+
+    bitwuzla_parameters = [PATH_BITWUZLA, "-m", "--bv-output-format", "16"]
+    bitwuzla_process = subprocess.Popen(bitwuzla_parameters,
+                                        stdout=subprocess.PIPE,
+                                        stdin=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+
+    result, err = bitwuzla_process.communicate(input=input_file)
+    decoded_result = result.decode("utf-8")
+    
+    # Prepend 'sat' if it's missing but Bitwuzla found a model
+    if "(define-fun" in decoded_result and "sat" not in decoded_result:
+        decoded_result = "sat\n" + decoded_result
+    
+    return decoded_result
 
 def foundSolution(solver_result):
     """
     Check if a solution was found.
     """
-    return "Valid" not in solver_result and "unsat" not in solver_result
+    if "unsat" in solver_result:
+        return False
+    if "sat" in solver_result:
+        return True
+    if "Valid" in solver_result:
+        return False
+    if "Invalid" in solver_result:
+        return True
+    return False

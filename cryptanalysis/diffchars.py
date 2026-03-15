@@ -40,13 +40,15 @@ class DifferentialCharacteristic(object):
                     # Add word to table
                     if word == 'w':
                         weight = self.characteristic_data[word+str(rnd)]
+                        # Strip 0x or #x if present
+                        weight_clean = weight.replace("0x", "").replace("#x", "")
                         # Print hw(weight) or weight depending on the cipher
                         if self.cipher.name == "keccakdiff" or \
                            self.cipher.name == "ketje" or \
                            self.cipher.name == "ascon":
-                            tmp_row.append("-" + str(int(weight, 16)))
+                            tmp_row.append("-" + str(int(weight_clean, 16)))
                         else:
-                            tmp_row.append("-" + str(bin(int(weight, 16)).count('1')))
+                            tmp_row.append("-" + str(bin(int(weight_clean, 16)).count('1')))
                     else:
                         tmp_row.append(self.characteristic_data[word+str(rnd)])
                 except KeyError:
@@ -84,7 +86,8 @@ class DifferentialCharacteristic(object):
         print(header_str)
         print("-"*len(header_str))
         print(data_str)
-        print("Weight: " + str(int(self.weight, 16)))
+        weight_clean = str(self.weight).replace("0x", "").replace("#x", "")
+        print("Weight: " + str(int(weight_clean, 16)))
         return
 
     def getDOTString(self):

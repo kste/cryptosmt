@@ -52,8 +52,8 @@ how a differential/linear model for SIMON can be constructed is given in [1].
 
 ## Installation
 
-CryptoSMT requires you to have [STP](https://github.com/stp/stp) and
-[Cryptominisat](https://github.com/msoos/cryptominisat/) installed and setup the
+CryptoSMT requires you to have [STP](https://github.com/stp/stp),
+[Cryptominisat](https://github.com/msoos/cryptominisat/) or [Bitwuzla](https://github.com/bitwuzla/bitwuzla) installed and setup the
 paths to the binaries in `config.py`. Further it requires the `pyyaml` which you
 can install using
 
@@ -65,12 +65,36 @@ Dockerfile. You can build a basic image using:
     cd docker/
     docker build -t cryptosmt .
     
-This includes building minisat, cryptominisat, STP, boolector and all
+This includes building minisat, cryptominisat, STP, boolector, Bitwuzla and all
 dependencies. You can then run the image with:
 
     docker run -it cryptosmt
 
 which gives you a ready to use setup of CryptoSMT.
+
+## Solvers
+
+CryptoSMT supports multiple SMT solvers for finding characteristics. While STP is the default, both Boolector and Bitwuzla often provide significant performance improvements for deeper searches.
+
+### Supported Solvers:
+*   **STP (Default):** Reliable and widely used for many primitives.
+*   **Boolector:** Often much faster than STP for bit-vector problems. Use with `--boolector`.
+*   **Bitwuzla:** The successor to Boolector, generally offering the best performance. Use with `--bitwuzla`.
+
+### Benchmarks (SIMON-32/64, 10 rounds)
+
+The following table compares the performance of the three solvers when searching for the minimum weight characteristic for 10 rounds of SIMON-32/64:
+
+| Solver | Weight Found | Time Taken | Performance vs STP |
+| :--- | :---: | :---: | :---: |
+| **STP (Default)** | 25 | **281.95s** (~4.7 min) | Baseline |
+| **Boolector** | 25 | **25.55s** | ~11x faster |
+| **Bitwuzla** | 25 | **10.69s** | **~26x faster** |
+
+To use Bitwuzla for the example above:
+```bash
+python3 cryptosmt.py --cipher simon --rounds 10 --wordsize 16 --bitwuzla
+```
 
 ## Usage
 
@@ -129,10 +153,10 @@ ARX, Speck might be a good start) and rename it to "NewCipher.py".
 
 We can describe the process of the CryptoSMT as the following steps:
 1. It creates an stp file which contains the SMT model of the differential cryptanaysis of the given cipher in CVC format (this file is placed in "./tmp/" folder)
-2. After generation of SMT model in CVC format, it calls an SMT solver to solve the generated model. The STP is used by default as SMT solver. You can also use the Boolector as SMT solver. 
-3. The SMT model contains some inherent constraints which are used for modeling the differential propagation rules, and some additional constraints which are used to model the outside counditions like the fixed input/output differentials values. 
-4. One of the additional constraints is the starting weight (of the differential probability) constraint. The first SMT model is generated with the starting weight, and this model is changed repeatedly by increasing the weight by one, and each time, it's satisfiablity is checked by an SMT solver. The goal is to find the minimum weight which makes the model satisfiable. 
-5. If the SMT model is satisfiable for the first time, the weight (of the differential probability) which is used, is reteurned as the minimum weight (of the differential probability) as one of the output, and the process is stoped.
+2. After generation of SMT model in CVC format, it calls an SMT solver to solve the generated model. The STP is used by default as SMT solver. You can also use Boolector or Bitwuzla as SMT solver. 
+3. The SMT model contains some inherent constraints which are used for modeling the differential propagation rules, and some additional constraints which are used to model the outside conditions like the fixed input/output differentials values. 
+4. One of the additional constraints is the starting weight (of the differential probability) constraint. The first SMT model is generated with the starting weight, and this model is changed repeatedly by increasing the weight by one, and each time, its satisfiability is checked by an SMT solver. The goal is to find the minimum weight which makes the model satisfiable. 
+5. If the SMT model is satisfiable for the first time, the weight (of the differential probability) which is used, is returned as the minimum weight (of the differential probability) as one of the output, and the process is stopped.
 
 These processes are almost realted to the mod0, which is used to find the best differential with maximum (minimum) differential probablity (weight).
 

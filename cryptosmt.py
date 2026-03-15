@@ -9,7 +9,7 @@ from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
                      siphash, simonrk, chaskeymachalf, simonkeyrc,
                      ketje, ascon, salsa, chacha, skinny, skinnyrk, gimli,
                      present, craft, craftlinear, trifle, trifle, triflerk)
-from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR
+from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR, PATH_BITWUZLA
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 
@@ -86,6 +86,10 @@ def checkenviroment():
         print("WARNING: Could not find BOOLECTOR binary, \"--boolector\" "
               "option not available.")
 
+    if not os.path.exists(PATH_BITWUZLA):
+        print("WARNING: Could not find BITWUZLA binary, \"--bitwuzla\" "
+              "option not available.")
+
     return
 
 
@@ -103,6 +107,7 @@ def loadparameters(args):
               "endweight" : 1000,
               "iterative" : False,
               "boolector" : False,
+              "bitwuzla" : False,
               "dot" : None,
               "latex" : None,
               "nummessages" : 1,
@@ -153,6 +158,9 @@ def loadparameters(args):
     if args.boolector:
         params["boolector"] = args.boolector
 
+    if args.bitwuzla:
+        params["bitwuzla"] = args.bitwuzla
+
     if args.nummessages:
         params["nummessages"] = args.nummessages[0]
 
@@ -202,6 +210,8 @@ def main():
                         help="Only search for iterative characteristics")
     parser.add_argument('--boolector', action="store_true",
                         help="Use boolector to find solutions")
+    parser.add_argument('--bitwuzla', action="store_true",
+                        help="Use bitwuzla to find solutions")
     parser.add_argument('--inputfile', nargs=1, help="Use an yaml input file to"
                                                      "read the parameters.")
     parser.add_argument('--dot', nargs=1, help="Print the trail in .dot format.")
