@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     python3-yaml \
     python3-pytest \
     python3-pytest-mock \
+    python3-tqdm \
     libboost-all-dev \
     bison \
     flex \

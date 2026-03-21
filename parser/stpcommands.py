@@ -27,7 +27,7 @@ def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> 
         blockingStatement += f"BVXOR({key}, {value}) | "
 
     blockingStatement = blockingStatement[:-2]
-    blockingStatement += f") = 0hex{'0'*(wordsize // 4)});"
+    blockingStatement += f") = 0x{'0'*(wordsize // 4)});"
     stpfile.write(blockingStatement)
     return
 
@@ -89,7 +89,8 @@ def limitWeight(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignor
     """
     stpfile.write("limitWeight: BITVECTOR(16);\n")
     stpfile.write(getWeightString(p, wordsize, ignoreMSBs, "limitWeight") + "\n")
-    stpfile.write(f"ASSERT(BVLE(limitWeight, {weight:#018b}));\n")
+    binary_weight = bin(weight)[2:].zfill(16)
+    stpfile.write(f"ASSERT(BVLE(limitWeight, 0bin{binary_weight}));\n")
     return
 
 def setupWeightComputationSum(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
@@ -103,7 +104,8 @@ def setupWeightComputationSum(stpfile: TextIO, weight: int, p: List[str], wordsi
     else:
         stpfile.write(f"ASSERT(weight = {round_sum});\n")
 
-    stpfile.write(f"ASSERT(weight = {weight:#018b});\n")
+    binary_weight = bin(weight)[2:].zfill(16)
+    stpfile.write(f"ASSERT(weight = 0bin{binary_weight});\n")
     return
 
 def setupWeightComputation(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
@@ -112,8 +114,8 @@ def setupWeightComputation(stpfile: TextIO, weight: int, p: List[str], wordsize:
     """
     stpfile.write("weight: BITVECTOR(16);\n")
     stpfile.write(getWeightString(p, wordsize, ignoreMSBs) + "\n")
-    stpfile.write(f"ASSERT(weight = {weight:#018b});\n")
-    #stpfile.write(f"ASSERT(BVLE(weight, {weight:#018b}));\n")
+    binary_weight = bin(weight)[2:].zfill(16)
+    stpfile.write(f"ASSERT(weight = 0bin{binary_weight});\n")
     return
 
 
@@ -122,12 +124,9 @@ def getWeightString(variables: List[str], wordsize: int, ignoreMSBs: int = 0, we
     Asserts that the weight is equal to the hamming weight of the
     given variables.
     """
-    # if len(variables) == 1:
-    #     return f"ASSERT({weightVariable} = {variables[0]});\n"
-
     command = f"ASSERT(({weightVariable} = BVPLUS(16,"
     for var in variables:
-        tmp = "0b00000000@(BVPLUS(8, "
+        tmp = "0bin00000000@(BVPLUS(8, "
         for bit in range(wordsize - ignoreMSBs):
             # Ignore MSBs if they do not contribute to
             # probability of the characteristic.

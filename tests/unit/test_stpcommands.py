@@ -59,6 +59,7 @@ def test_getWeightString():
     wordsize = 4
     result = stpcommands.getWeightString(variables, wordsize)
     assert "ASSERT((weight = BVPLUS(16," in result
+    assert "0bin00000000@(BVPLUS(8," in result
     assert "0bin0000000@(w0[0:0])" in result
     assert "0bin0000000@(w1[3:3])" in result
 
@@ -67,7 +68,7 @@ def test_setupWeightComputation():
     stpcommands.setupWeightComputation(output, 10, ["w0"], 16)
     content = output.getvalue()
     assert "weight: BITVECTOR(16);" in content
-    assert "ASSERT(weight = 0b0000000000001010);" in content
+    assert "ASSERT(weight = 0bin0000000000001010);" in content
 
 def test_blockCharacteristic():
     class MockCharData:

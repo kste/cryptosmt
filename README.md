@@ -107,6 +107,14 @@ To use Bitwuzla for the example above:
 python3 cryptosmt.py --cipher simon --rounds 10 --wordsize 16 --bitwuzla
 ```
 
+## Logging and Progress
+
+CryptoSMT provides visual feedback using `tqdm` progress bars and standard Python `logging`. You can control the verbosity of the output using the following flags:
+
+*   **Default:** Shows general progress and found characteristics with a progress bar.
+*   **`--verbose`:** Shows detailed information, including solver commands and raw output. Sets log level to `DEBUG`.
+*   **`--quiet`:** Disables the progress bar and only shows found results or errors. Sets log level to `WARNING`.
+
 ## Usage
 
 As an example we will look at how CryptoSMT can be used to find the optimal

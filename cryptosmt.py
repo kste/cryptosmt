@@ -18,6 +18,9 @@ from typing import Dict, List, Optional, Any
 
 import yaml
 import os
+import logging
+
+logger = logging.getLogger("cryptosmt")
 
 @dataclass
 class ToolParameters:
@@ -38,6 +41,8 @@ class ToolParameters:
     fixedVariables: Dict[str, str] = field(default_factory=dict)
     blockedCharacteristics: List[Any] = field(default_factory=list)
     rotationconstants: Optional[List[int]] = None
+    verbose: bool = False
+    quiet: bool = False
 
 
 def startsearch(params: ToolParameters):
@@ -72,11 +77,19 @@ def startsearch(params: ToolParameters):
     if params.cipher in cipher_suite:
         cipher = cipher_suite[params.cipher]
     else:
-        print(f"Cipher {params.cipher} not supported!")
+        logger.error(f"Cipher {params.cipher} not supported!")
         return
 
     # For compatibility with existing search module which expects a dict
     params_dict = asdict(params)
+    
+    # Remove keys that are not expected by the search/cipher modules
+    if params.rotationconstants is None:
+        del params_dict["rotationconstants"]
+    
+    # These are only for the main tool
+    del params_dict["verbose"]
+    del params_dict["quiet"]
 
     # Handle program flow
     if params.mode == 0:
@@ -101,17 +114,17 @@ def checkenviroment():
         os.makedirs("./tmp/")
 
     if not os.path.exists(PATH_STP):
-        print(f"ERROR: Could not find STP binary at {PATH_STP}, please check config.py")
+        logger.error(f"Could not find STP binary at {PATH_STP}, please check config.py")
         exit()
 
     if not os.path.exists(PATH_CRYPTOMINISAT):
-        print(f"WARNING: Could not find CRYPTOMINISAT binary at {PATH_CRYPTOMINISAT}, please check config.py.")
+        logger.warning(f"Could not find CRYPTOMINISAT binary at {PATH_CRYPTOMINISAT}, please check config.py.")
 
     if not os.path.exists(PATH_BOOLECTOR):
-        print(f"WARNING: Could not find BOOLECTOR binary at {PATH_BOOLECTOR}, \"--boolector\" option not available.")
+        logger.warning(f"Could not find BOOLECTOR binary at {PATH_BOOLECTOR}, \"--boolector\" option not available.")
 
     if not os.path.exists(PATH_BITWUZLA):
-        print(f"WARNING: Could not find BITWUZLA binary at {PATH_BITWUZLA}, \"--bitwuzla\" option not available.")
+        logger.warning(f"Could not find BITWUZLA binary at {PATH_BITWUZLA}, \"--bitwuzla\" option not available.")
 
     return
 
@@ -181,6 +194,12 @@ def loadparameters(args) -> ToolParameters:
     if args.latex is not None:
         params.latex = args.latex[0]
 
+    if args.verbose:
+        params.verbose = args.verbose
+    
+    if args.quiet:
+        params.quiet = args.quiet
+
     return params
 
 
@@ -227,10 +246,21 @@ def main():
                                                      "read the parameters.")
     parser.add_argument('--dot', nargs=1, help="Print the trail in .dot format.")
     parser.add_argument('--latex', nargs=1, help="Print the trail in .tex format.")
+    parser.add_argument('--verbose', action="store_true", help="Show verbose output")
+    parser.add_argument('--quiet', action="store_true", help="Show only results")
 
     # Parse command line arguments and construct parameter list.
     args = parser.parse_args()
     params = loadparameters(args)
+
+    # Set up logging
+    log_level = logging.INFO
+    if params.verbose:
+        log_level = logging.DEBUG
+    elif params.quiet:
+        log_level = logging.WARNING
+    
+    logging.basicConfig(level=log_level, format='%(levelname)s: %(message)s')
 
     # Check if enviroment is setup correctly.
     checkenviroment()
