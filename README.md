@@ -72,6 +72,17 @@ dependencies. You can then run the image with:
 
 which gives you a ready to use setup of CryptoSMT.
 
+## Testing
+
+CryptoSMT uses `pytest` for testing. You can run the tests using the provided
+Dockerfile:
+
+    docker build -t cryptosmt .
+    docker run --rm --entrypoint python3 cryptosmt -m pytest tests/
+
+This will run both unit tests and integration tests that verify the tool's 
+search functionality with different ciphers and solvers.
+
 ## Solvers
 
 CryptoSMT supports multiple SMT solvers for finding characteristics. While STP is the default, both Boolector and Bitwuzla often provide significant performance improvements for deeper searches.
