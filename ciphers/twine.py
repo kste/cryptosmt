@@ -13,7 +13,9 @@ class TwineCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "twine"
+    @property
+    def name(self):
+        return "twine"
 
     def getFormatString(self):
         """

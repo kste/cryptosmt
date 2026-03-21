@@ -16,7 +16,9 @@ class SkinnyRKCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "skinnyrk"
+    @property
+    def name(self):
+        return "skinnyrk"
     # Sbox lookup table   
     skinny_sbox = [0xc, 0x6, 0x9, 0x0, 0x1, 0xa, 0x2, 0xb,  
                     0x3, 0x8, 0x5, 0xd, 0x4, 0xe, 0x7, 0xf]

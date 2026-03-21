@@ -12,6 +12,14 @@ class AbstractCipher(object, metaclass=ABCMeta):
     Abstract Class for Ciphers
     """
 
+    @property
+    @abstractmethod
+    def name(self):
+        """
+        Return the name of the cipher.
+        """
+        pass
+
     @abstractmethod
     def createSTP(self, filename, cipherParameters):
         """

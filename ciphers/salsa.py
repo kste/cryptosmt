@@ -19,7 +19,9 @@ class SalsaCipher(AbstractCipher):
     For more information on ChaCha see http://cr.yp.to/snuffle.html
     """
 
-    name = "salsa"
+    @property
+    def name(self):
+        return "salsa"
 
     def getFormatString(self):
         """

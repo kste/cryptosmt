@@ -14,7 +14,9 @@ class GiftCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "gift"
+    @property
+    def name(self):
+        return "gift"
 
     def getFormatString(self):
         """

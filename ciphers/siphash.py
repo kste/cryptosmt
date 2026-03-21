@@ -17,7 +17,9 @@ class SipHashCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "siphash"
+    @property
+    def name(self):
+        return "siphash"
     num_messages = 1
 
     def getFormatString(self):

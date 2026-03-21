@@ -19,7 +19,9 @@ class ChaChaCipher(AbstractCipher):
     For more information on ChaCha see http://cr.yp.to/chacha.html
     """
 
-    name = "chacha"
+    @property
+    def name(self):
+        return "chacha"
 
     def getFormatString(self):
         """

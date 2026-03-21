@@ -17,7 +17,9 @@ class GimliCipher(AbstractCipher):
     permutation.
     """
 
-    name = "gimli"
+    @property
+    def name(self):
+        return "gimli"
 
     # Constants
     a = 2

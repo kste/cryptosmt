@@ -16,7 +16,9 @@ class SimonCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "simon"
+    @property
+    def name(self):
+        return "simon"
     rot_alpha = 8
     rot_beta = 1
     rot_gamma = 2

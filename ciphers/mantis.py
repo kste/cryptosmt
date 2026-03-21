@@ -14,7 +14,9 @@ class MantisCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "mantis"
+    @property
+    def name(self):
+        return "mantis"
 
     def getFormatString(self):
         """

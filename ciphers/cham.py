@@ -17,7 +17,9 @@ class CHAMCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "cham"
+    @property
+    def name(self):
+        return "cham"
 
     def getFormatString(self):
         """

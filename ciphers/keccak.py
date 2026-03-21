@@ -18,7 +18,9 @@ class KeccakCipher(AbstractCipher):
     For more information on Keccak see http://keccak.noekeon.org/
     """
 
-    name = "keccak"
+    @property
+    def name(self):
+        return "keccak"
 
     RO = [[0,  36,  3, 41, 18],
           [1,  44, 10, 45,  2],

@@ -14,7 +14,9 @@ class FlyCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "fly"
+    @property
+    def name(self):
+        return "fly"
 
     def getFormatString(self):
         """

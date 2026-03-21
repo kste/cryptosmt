@@ -14,7 +14,9 @@ class PresentCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "present"
+    @property
+    def name(self):
+        return "present"
 
     def getFormatString(self):
         """

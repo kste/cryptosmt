@@ -17,7 +17,9 @@ class SimonKeyRcCipher(AbstractCipher):
     to find recover a secret key from plaintext/ciphertexts.
     """
 
-    name = "simonkeyrc"
+    @property
+    def name(self):
+        return "simonkeyrc"
     rot_alpha = 8
     rot_beta = 1
     rot_gamma = 2

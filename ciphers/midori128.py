@@ -14,7 +14,9 @@ class Midori128Cipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "midori128"
+    @property
+    def name(self):
+        return "midori128"
 
     def getFormatString(self):
         """

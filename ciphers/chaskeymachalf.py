@@ -20,7 +20,9 @@ class ChasKeyMacHalf(AbstractCipher):
     For more information on Chaskey see http://mouha.be/chaskey/
     """
 
-    name = "chaskeyhalf"
+    @property
+    def name(self):
+        return "chaskeyhalf"
     num_messages = 1
 
     def getFormatString(self):

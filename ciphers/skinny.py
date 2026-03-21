@@ -16,7 +16,9 @@ class SkinnyCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "skinny"
+    @property
+    def name(self):
+        return "skinny"
 
     # Sbox lookup table
     skinny_sbox = [0xc, 0x6, 0x9, 0x0, 0x1, 0xa, 0x2, 0xb, 

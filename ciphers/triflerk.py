@@ -15,7 +15,9 @@ class TrifleRK(AbstractCipher):
     model. 
     """
 
-    name = "triflerk"
+    @property
+    def name(self):
+        return "triflerk"
 
     # trifle's Sbox lookup table
     trifle_sbox = [0, 12, 9, 7, 3, 5, 14, 4, 6, 11, 10, 2, 13, 1, 8, 15]

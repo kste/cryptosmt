@@ -16,7 +16,9 @@ class NoekeonCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "noekeon"
+    @property
+    def name(self):
+        return "noekeon"
 
     def getFormatString(self):
         """

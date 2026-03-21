@@ -14,7 +14,9 @@ class PrinceCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "prince"
+    @property
+    def name(self):
+        return "prince"
 
     def getFormatString(self):
         """

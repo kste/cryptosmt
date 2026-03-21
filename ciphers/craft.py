@@ -15,7 +15,9 @@ class CraftCipher(AbstractCipher):
     differential effect for the given rounds.
     """
 
-    name = "craft"
+    @property
+    def name(self):
+        return "craft"
 
     # CRAFTS's Sbox lookup table
     craft_sbox = [0xc, 0xa, 0xd, 0x3, 0xe, 0xb, 0xf,

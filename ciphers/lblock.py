@@ -15,7 +15,9 @@ class LBlockCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "lblock"
+    @property
+    def name(self):
+        return "lblock"
 
     def getFormatString(self):
         """

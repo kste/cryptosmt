@@ -20,7 +20,9 @@ class AsconCipher(AbstractCipher):
     For more information on Ascon see http://ascon.iaik.tugraz.at/
     """
 
-    name = "ascon"
+    @property
+    def name(self):
+        return "ascon"
 
     def getFormatString(self):
         """

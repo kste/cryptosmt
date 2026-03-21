@@ -16,7 +16,9 @@ class SPARXRound6RCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "sparxround6r"
+    @property
+    def name(self):
+        return "sparxround6r"
     rounds_per_step = 3
 
     def getFormatString(self):

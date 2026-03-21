@@ -6,10 +6,7 @@ Created on Mar 28, 2014
 
 # Structured configuration refactoring
 from cryptanalysis import search
-from ciphers import simon, speck, simonlinear, keccak, keccakdiff, \
-    siphash, simonrk, chaskeymachalf, simonkeyrc, ketje, ascon, salsa, \
-    chacha, skinny, skinnyrk, gimli, present, craft, craftlinear, \
-    trifle, triflerk
+import ciphers
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR, PATH_BITWUZLA
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -43,6 +40,7 @@ class ToolParameters:
     rotationconstants: Optional[List[int]] = None
     verbose: bool = False
     quiet: bool = False
+    list_ciphers: bool = False
 
 
 def startsearch(params: ToolParameters):
@@ -50,33 +48,16 @@ def startsearch(params: ToolParameters):
     Starts the search tool for the given parameters
     """
 
-    cipher_suite = {"simon" : simon.SimonCipher(),
-                    "speck" : speck.SpeckCipher(),
-                    "simonlinear" : simonlinear.SimonLinearCipher(),
-                    "keccak" : keccak.KeccakCipher(),
-                    "keccakdiff" : keccakdiff.KeccakDiffCipher(),
-                    "ketje" : ketje.KetjeCipher(),
-                    "siphash" : siphash.SipHashCipher(),
-                    "simonrk" : simonrk.SimonRkCipher(),
-                    "simonkeyrc" : simonkeyrc.SimonKeyRcCipher(),
-                    "chaskeyhalf" : chaskeymachalf.ChasKeyMacHalf(),
-                    "ascon" : ascon.AsconCipher(),
-                    "salsa" : salsa.SalsaCipher(),
-                    "chacha" : chacha.ChaChaCipher(),
-                    "skinny" : skinny.SkinnyCipher(),
-                    "skinnyrk" : skinnyrk.SkinnyRKCipher(),
-                    "gimli" : gimli.GimliCipher(),
-                    "present" : present.PresentCipher(),
-                    "craft" : craft.CraftCipher(),
-                    "craftlinear" : craftlinear.CraftCipherLinear(),                   
-                    "trifle" : trifle.TrifleCipher(),
-                    "triflerk" : triflerk.TrifleRK()}
+    if params.list_ciphers:
+        cipher_suite = ciphers.get_cipher_suite()
+        print("Available ciphers:")
+        for name in sorted(cipher_suite.keys()):
+            print(f"  - {name}")
+        return
 
-    cipher = None
+    cipher = ciphers.get_cipher(params.cipher)
 
-    if params.cipher in cipher_suite:
-        cipher = cipher_suite[params.cipher]
-    else:
+    if cipher is None:
         logger.error(f"Cipher {params.cipher} not supported!")
         return
 
@@ -200,6 +181,9 @@ def loadparameters(args) -> ToolParameters:
     if args.quiet:
         params.quiet = args.quiet
 
+    if args.list_ciphers:
+        params.list_ciphers = args.list_ciphers
+
     return params
 
 
@@ -248,6 +232,7 @@ def main():
     parser.add_argument('--latex', nargs=1, help="Print the trail in .tex format.")
     parser.add_argument('--verbose', action="store_true", help="Show verbose output")
     parser.add_argument('--quiet', action="store_true", help="Show only results")
+    parser.add_argument('--list-ciphers', action="store_true", help="List all available ciphers")
 
     # Parse command line arguments and construct parameter list.
     args = parser.parse_args()

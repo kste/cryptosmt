@@ -20,7 +20,9 @@ class KeccakDiffCipher(AbstractCipher):
     For more information on Keccak see http://keccak.noekeon.org/    
     """
 
-    name = "keccakdiff"
+    @property
+    def name(self):
+        return "keccakdiff"
 
     RO = [[0,  36,  3, 41, 18],
           [1,  44, 10, 45,  2],

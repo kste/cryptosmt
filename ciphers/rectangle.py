@@ -14,7 +14,9 @@ class RectangleCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "rectangle"
+    @property
+    def name(self):
+        return "rectangle"
 
     def getFormatString(self):
         """

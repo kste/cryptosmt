@@ -18,7 +18,9 @@ class SimonRkCipher(AbstractCipher):
     for the given parameters.
     """
 
-    name = "simonrk"
+    @property
+    def name(self):
+        return "simonrk"
     rot_alpha = 8
     rot_beta = 1
     rot_gamma = 2

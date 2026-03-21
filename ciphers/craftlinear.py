@@ -13,7 +13,9 @@ class CraftCipherLinear(AbstractCipher):
     linear cryptanalysis in the single tweak model. 
     """
 
-    name = "craftlinear"
+    @property
+    def name(self):
+        return "craftlinear"
 
     # CRAFTS's Sbox lookup table
     craft_sbox = [0xc, 0xa, 0xd, 0x3, 0xe, 0xb, 0xf,

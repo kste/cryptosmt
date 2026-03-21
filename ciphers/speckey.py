@@ -17,7 +17,9 @@ class SpeckeyCipher(AbstractCipher):
     to find differential characteristics for the given parameters.
     """
 
-    name = "speckey"
+    @property
+    def name(self):
+        return "speckey"
     rot_alpha = 7
     rot_beta = 2
 

@@ -10,8 +10,13 @@ def run_cryptosmt():
     def _run(args):
         cmd = ["python3", "cryptosmt.py"] + args
         
-        # Do not automatically add solvers, let the tool use defaults 
-        # or the test provide them.
+        # Prefer faster solvers if not explicitly specified
+        from config import PATH_BITWUZLA, PATH_BOOLECTOR
+        if "--bitwuzla" not in args and "--boolector" not in args:
+            if os.path.exists(PATH_BITWUZLA):
+                cmd.append("--bitwuzla")
+            elif os.path.exists(PATH_BOOLECTOR):
+                cmd.append("--boolector")
         
         result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         return result
