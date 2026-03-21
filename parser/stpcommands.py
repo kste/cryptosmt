@@ -6,8 +6,9 @@ Provides functions for constructing the input file for STP.
 '''
 
 import itertools
+from typing import List, Dict, TextIO, Any
 
-def blockCharacteristic(stpfile, characteristic, wordsize):
+def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> None:
     """
     Excludes this characteristic from being found.
     """
@@ -23,15 +24,15 @@ def blockCharacteristic(stpfile, characteristic, wordsize):
     blockingStatement = "ASSERT(NOT("
 
     for key, value in filtered_words.items():
-        blockingStatement += "BVXOR({}, {}) | ".format(key, value)
+        blockingStatement += f"BVXOR({key}, {value}) | "
 
     blockingStatement = blockingStatement[:-2]
-    blockingStatement += ") = 0hex{});".format("0"*(wordsize // 4))
+    blockingStatement += f") = 0hex{'0'*(wordsize // 4)});"
     stpfile.write(blockingStatement)
     return
 
 
-def setupQuery(stpfile):
+def setupQuery(stpfile: TextIO) -> None:
     """
     Adds the query and printing of counterexample to the stp stpfile.
     """
@@ -40,7 +41,7 @@ def setupQuery(stpfile):
     return
 
 
-def setupVariables(stpfile, variables, wordsize):
+def setupVariables(stpfile: TextIO, variables: List[str], wordsize: int) -> None:
     """
     Adds a list of variables to the stp stpfile.
     """
@@ -48,98 +49,89 @@ def setupVariables(stpfile, variables, wordsize):
     return
 
 
-def assertVariableValue(stpfile, a, b):
+def assertVariableValue(stpfile: TextIO, a: str, b: str) -> None:
     """
     Adds an assert that a = b to the stp stpfile.
     """
-    stpfile.write("ASSERT({} = {});\n".format(a, b))
+    stpfile.write(f"ASSERT({a} = {b});\n")
     return
 
 
-def getStringForVariables(variables, wordsize):
+def getStringForVariables(variables: List[str], wordsize: int) -> str:
     """
     Takes as input the variable name, number of variables and the wordsize
     and constructs for instance a string of the form:
     x00, x01, ..., x30: BITVECTOR(wordsize);
     """
-    command = ""
-    for var in variables:
-        command += var + ","
-
-    command = command[:-1]
-    command += ": BITVECTOR({0});".format(wordsize)
+    command = ",".join(variables)
+    command += f": BITVECTOR({wordsize});"
     return command
 
 
-def assertNonZero(stpfile, variables, wordsize):
+def assertNonZero(stpfile: TextIO, variables: List[str], wordsize: int) -> None:
     stpfile.write(getStringForNonZero(variables, wordsize) + '\n')
     return
 
 
-def getStringForNonZero(variables, wordsize):
+def getStringForNonZero(variables: List[str], wordsize: int) -> str:
     """
     Asserts that no all-zero characteristic is allowed
     """
     command = "ASSERT(NOT(("
-    for var in variables:
-        command += var + "|"
-
-    command = command[:-1]
-    command += ") = 0bin{}));".format("0" * wordsize)
+    command += "|".join(variables)
+    command += f") = 0bin{'0' * wordsize}));"
     return command
 
 
-def limitWeight(stpfile, weight, p, wordsize, ignoreMSBs=0):
+def limitWeight(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
     """
     Adds the weight computation and assertion to the stp stpfile.
     """
     stpfile.write("limitWeight: BITVECTOR(16);\n")
     stpfile.write(getWeightString(p, wordsize, ignoreMSBs, "limitWeight") + "\n")
-    stpfile.write("ASSERT(BVLE(limitWeight, {0:#018b}));\n".format(weight))
+    stpfile.write(f"ASSERT(BVLE(limitWeight, {weight:#018b}));\n")
     return
 
-def setupWeightComputationSum(stpfile, weight, p, wordsize, ignoreMSBs=0):
+def setupWeightComputationSum(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
     """
     Assert that weight is equal to the sum of p.
     """
     stpfile.write("weight: BITVECTOR(16);\n")
-    round_sum = ""
-    for w in p:
-        round_sum += w + ","
+    round_sum = ",".join(p)
     if len(p) > 1:
-        stpfile.write("ASSERT(weight = BVPLUS({},{}));\n".format(16, round_sum[:-1]))
+        stpfile.write(f"ASSERT(weight = BVPLUS(16,{round_sum}));\n")
     else:
-        stpfile.write("ASSERT(weight = {});\n".format(round_sum[:-1]))
+        stpfile.write(f"ASSERT(weight = {round_sum});\n")
 
-    stpfile.write("ASSERT(weight = {0:#018b});\n".format(weight))
+    stpfile.write(f"ASSERT(weight = {weight:#018b});\n")
     return
 
-def setupWeightComputation(stpfile, weight, p, wordsize, ignoreMSBs=0):
+def setupWeightComputation(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
     """
     Assert that weight is equal to the sum of the hamming weight of p.
     """
     stpfile.write("weight: BITVECTOR(16);\n")
     stpfile.write(getWeightString(p, wordsize, ignoreMSBs) + "\n")
-    stpfile.write("ASSERT(weight = {0:#018b});\n".format(weight))
-    #stpfile.write("ASSERT(BVLE(weight, {0:#018b}));\n".format(weight))
+    stpfile.write(f"ASSERT(weight = {weight:#018b});\n")
+    #stpfile.write(f"ASSERT(BVLE(weight, {weight:#018b}));\n")
     return
 
 
-def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
+def getWeightString(variables: List[str], wordsize: int, ignoreMSBs: int = 0, weightVariable: str = "weight") -> str:
     """
     Asserts that the weight is equal to the hamming weight of the
     given variables.
     """
     # if len(variables) == 1:
-    #     return "ASSERT({} = {});\n".format(weightVariable, variables[0])
+    #     return f"ASSERT({weightVariable} = {variables[0]});\n"
 
-    command = "ASSERT(({} = BVPLUS(16,".format(weightVariable)
+    command = f"ASSERT(({weightVariable} = BVPLUS(16,"
     for var in variables:
         tmp = "0b00000000@(BVPLUS(8, "
         for bit in range(wordsize - ignoreMSBs):
             # Ignore MSBs if they do not contribute to
             # probability of the characteristic.
-            tmp += "0bin0000000@({0}[{1}:{1}]),".format(var, bit)
+            tmp += f"0bin0000000@({var}[{bit}:{bit}]),"
         # Pad the constraint if necessary
         if (wordsize - ignoreMSBs) == 1:
             tmp += "0bin0,"
@@ -152,46 +144,41 @@ def getWeightString(variables, wordsize, ignoreMSBs=0, weightVariable="weight"):
     return command
 
 
-def getStringEq(a, b, c):
-    command = "(BVXOR(~{0}, {1}) & BVXOR(~{0}, {2}))".format(a, b, c)
+def getStringEq(a: str, b: str, c: str) -> str:
+    command = f"(BVXOR(~{a}, {b}) & BVXOR(~{a}, {c}))"
     return command
 
 
-def getStringAdd(a, b, c, wordsize):
-    command = "(((BVXOR((~{0} << 1)[{3}:0], ({1} << 1)[{3}:0])".format(
-        a, b, c, wordsize - 1)
-    command += "& BVXOR((~{0} << 1)[{3}:0], ({2} << 1)[{3}:0]))".format(
-        a, b, c, wordsize - 1)
-    command += " & BVXOR({0}, BVXOR({1}, BVXOR({2}, ({1} << 1)[{3}:0]))))".format(
-        a, b, c, wordsize - 1)
-    command += " = 0bin{})".format("0" * wordsize)
+def getStringAdd(a: str, b: str, c: str, wordsize: int) -> str:
+    command = f"(((BVXOR((~{a} << 1)[{wordsize - 1}:0], ({b} << 1)[{wordsize - 1}:0])"
+    command += f"& BVXOR((~{a} << 1)[{wordsize - 1}:0], ({c} << 1)[{wordsize - 1}:0]))"
+    command += f" & BVXOR({a}, BVXOR({b}, BVXOR({c}, ({b} << 1)[{wordsize - 1}:0]))))"
+    command += f" = 0bin{'0' * wordsize})"
     return command
 
-def getStringForAndDifferential(a, b, c):
+def getStringForAndDifferential(a: str, b: str, c: str) -> str:
     """
     AND = valid(x,y,out) = (x and out) or (y and out) or (not out)
     """
-    command = "(({0} & {2}) | ({1} & {2}) | (~{2}))".format(a, b, c)
+    command = f"(({a} & {c}) | ({b} & {c}) | (~{c}))"
     return command
 
 
-def getStringLeftRotate(value, rotation, wordsize):
+def getStringLeftRotate(value: str, rotation: int, wordsize: int) -> str:
     if rotation % wordsize == 0:
-        return "{0}".format(value)
-    command = "((({0} << {1})[{2}:0]) | (({0} >> {3})[{2}:0]))".format(
-        value, (rotation % wordsize), wordsize - 1, (wordsize - rotation) % wordsize)
+        return f"{value}"
+    command = f"((({value} << {rotation % wordsize})[{wordsize - 1}:0]) | (({value} >> {(wordsize - rotation) % wordsize})[{wordsize - 1}:0]))"
 
     return command
 
 
-def getStringRightRotate(value, rotation, wordsize):
+def getStringRightRotate(value: str, rotation: int, wordsize: int) -> str:
     if rotation % wordsize == 0:
-        return "{0}".format(value)
-    command = "((({0} >> {1})[{2}:0]) | (({0} << {3})[{2}:0]))".format(
-        value, (rotation % wordsize), wordsize - 1, (wordsize - rotation) % wordsize)
+        return f"{value}"
+    command = f"((({value} >> {rotation % wordsize})[{wordsize - 1}:0]) | (({value} << {(wordsize - rotation) % wordsize})[{wordsize - 1}:0]))"
     return command
 
-def add4bitSbox(sbox, variables):
+def add4bitSbox(sbox: List[int], variables: List[str]) -> str:
     """
     Adds the constraints for the S-box and the weight
     for the differential transition.
@@ -252,8 +239,8 @@ def add4bitSbox(sbox, variables):
             expr = ["~" if x == 1 else "" for x in list(prod)]
             clause = ""
             for literal in range(12):
-                clause += "{0}{1} | ".format(expr[literal], variables[literal])
+                clause += f"{expr[literal]}{variables[literal]} | "
 
-            cnf += "({}) &".format(clause[:-2])
+            cnf += f"({clause[:-2]}) &"
 
-    return "ASSERT({} = 0bin1);\n".format(cnf[:-2])
+    return f"ASSERT({cnf[:-2]} = 0bin1);\n"

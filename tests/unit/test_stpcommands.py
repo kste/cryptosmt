@@ -1,5 +1,6 @@
 import pytest
 from parser import stpcommands
+import io
 
 def test_getStringLeftRotate():
     # Test simple rotation
@@ -42,3 +43,42 @@ def test_getStringForAndDifferential():
     a, b, c = "x", "y", "z"
     expected = "((x & z) | (y & z) | (~z))"
     assert stpcommands.getStringForAndDifferential(a, b, c) == expected
+
+def test_getStringAdd():
+    a, b, c = "x", "y", "z"
+    wordsize = 4
+    # Testing the output of getStringAdd which is quite complex
+    result = stpcommands.getStringAdd(a, b, c, wordsize)
+    assert "BVXOR((~x << 1)[3:0], (y << 1)[3:0])" in result
+    assert "BVXOR((~x << 1)[3:0], (z << 1)[3:0])" in result
+    assert "BVXOR(x, BVXOR(y, BVXOR(z, (y << 1)[3:0])))" in result
+    assert "= 0bin0000" in result
+
+def test_getWeightString():
+    variables = ["w0", "w1"]
+    wordsize = 4
+    result = stpcommands.getWeightString(variables, wordsize)
+    assert "ASSERT((weight = BVPLUS(16," in result
+    assert "0bin0000000@(w0[0:0])" in result
+    assert "0bin0000000@(w1[3:3])" in result
+
+def test_setupWeightComputation():
+    output = io.StringIO()
+    stpcommands.setupWeightComputation(output, 10, ["w0"], 16)
+    content = output.getvalue()
+    assert "weight: BITVECTOR(16);" in content
+    assert "ASSERT(weight = 0b0000000000001010);" in content
+
+def test_blockCharacteristic():
+    class MockCharData:
+        def __init__(self, data):
+            self.characteristic_data = data
+    
+    char = MockCharData({"x0": "0x0001", "y0": "0x0002", "z0": "0x0003"})
+    output = io.StringIO()
+    stpcommands.blockCharacteristic(output, char, 16)
+    content = output.getvalue()
+    # Should only include x and y by default logic (starts with x, y, s, v)
+    assert "BVXOR(x0, 0x0001)" in content
+    assert "BVXOR(y0, 0x0002)" in content
+    assert "z0" not in content

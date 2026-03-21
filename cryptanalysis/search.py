@@ -4,9 +4,11 @@ Created on Apr 3, 2014
 @author: stefan
 '''
 
+from typing import Dict, Any, List
 from parser import parsesolveroutput
 from config import (PATH_STP, PATH_BOOLECTOR, PATH_BITWUZLA, PATH_CRYPTOMINISAT, MAX_WEIGHT,
                     MAX_CHARACTERISTICS)
+from ciphers.cipher import AbstractCipher
 
 import subprocess
 import random
@@ -15,16 +17,16 @@ import os
 import time
 
 
-def computeProbabilityOfDifferentials(cipher, parameters):
+def computeProbabilityOfDifferentials(cipher: AbstractCipher, parameters: Dict[str, Any]) -> float:
     """
     Computes the probability of the differential by iteratively
     summing up all characteristics of a specific weight using
     a SAT solver.
     """
-    rnd_string_tmp = '%030x' % random.randrange(16**30)
-    diff_prob = 0
+    rnd_string_tmp = f"{random.randrange(16**30):030x}"
+    diff_prob = 0.0
     characteristics_found = 0
-    sat_logfile = "tmp/satlog{}.tmp".format(rnd_string_tmp)
+    sat_logfile = f"tmp/satlog{rnd_string_tmp}.tmp"
 
     start_time = time.time()
 
@@ -34,7 +36,7 @@ def computeProbabilityOfDifferentials(cipher, parameters):
         if os.path.isfile(sat_logfile):
             os.remove(sat_logfile)
 
-        stp_file = "tmp/{}{}.stp".format(cipher.name, rnd_string_tmp)
+        stp_file = f"tmp/{cipher.name}{rnd_string_tmp}.stp"
         cipher.createSTP(stp_file, parameters)
 
         # Start solver
@@ -42,7 +44,7 @@ def computeProbabilityOfDifferentials(cipher, parameters):
         log_file = open(sat_logfile, "w")
 
         # Find the number of solutions with the SAT solver
-        print("Finding all trails of weight {}".format(parameters["sweight"]))
+        print(f"Finding all trails of weight {parameters['sweight']}")
 
         # Watch the process and count solutions
         solutions = 0
@@ -52,10 +54,10 @@ def computeProbabilityOfDifferentials(cipher, parameters):
             if "s SATISFIABLE" in line:
                 solutions += 1
             if solutions % 100 == 0:
-                print("\tSolutions: {}\r".format(solutions // 2), end="")
+                print(f"\tSolutions: {solutions // 2}\r", end="")
 
         log_file.close()
-        print("\tSolutions: {}".format(solutions // 2))
+        print(f"\tSolutions: {solutions // 2}")
 
         assert solutions == countSolutionsLogfile(sat_logfile)
 
@@ -67,20 +69,19 @@ def computeProbabilityOfDifferentials(cipher, parameters):
         characteristics_found += solutions
         if diff_prob > 0.0:
             #print("\tSolutions: {}".format(solutions))
-            print("\tTrails found: {}".format(characteristics_found))
-            print("\tCurrent Probability: " + str(math.log(diff_prob, 2)))
-            print("\tTime: {}s".format(round(time.time() - start_time, 2)))
+            print(f"\tTrails found: {characteristics_found}")
+            print(f"\tCurrent Probability: {math.log(diff_prob, 2)}")
+            print(f"\tTime: {round(time.time() - start_time, 2)}s")
         parameters["sweight"] += 1
 
     return diff_prob
 
 
-def findBestConstants(cipher, parameters):
+def findBestConstants(cipher: AbstractCipher, parameters: Dict[str, Any]) -> List[int]:
     """
     Search for the optimal differential or linear characteristics.
     Works only for SIMON!
     """
-    weight = parameters["sweight"]
     wordsize = parameters["wordsize"]
 
     constantMinWeights = []
@@ -106,7 +107,7 @@ def findBestConstants(cipher, parameters):
                 parameters["rotationconstants"] = [alpha, beta, gamma]
 
                 # Construct problem instance for given parameters
-                stp_file = "tmp/{}_{}const.stp".format(cipher.name, gamma)
+                stp_file = f"tmp/{cipher.name}_{gamma}const.stp"
                 cipher.createSTP(stp_file, parameters)
 
                 result = ""
@@ -119,24 +120,21 @@ def findBestConstants(cipher, parameters):
 
                 # Check if a characteristic was found
                 if foundSolution(result):
-                    print("Alpha: {} Beta: {} Gamma: {} Weight: {}".format(
-                        alpha, beta, gamma, weight))
+                    print(f"Alpha: {alpha} Beta: {beta} Gamma: {gamma} Weight: {weight}")
                     break
                 weight += 1
             constantMinWeights.append(weight)
     print(constantMinWeights)
     return constantMinWeights
 
-def findMinWeightCharacteristic(cipher, parameters):
+def findMinWeightCharacteristic(cipher: AbstractCipher, parameters: Dict[str, Any]) -> int:
     """
     Find a characteristic of minimal weight for the cipher
     parameters = [rounds, wordsize, sweight, isIterative, fixedVariables]
     """
 
-    print(("Starting search for characteristic with minimal weight\n"
-           "{} - Rounds: {} Wordsize: {}".format(cipher.name,
-                                                 parameters["rounds"],
-                                                 parameters["wordsize"])))
+    print(f"Starting search for characteristic with minimal weight\n"
+          f"{cipher.name} - Rounds: {parameters['rounds']} Wordsize: {parameters['wordsize']}")
     print("---")
 
     start_time = time.time()
@@ -144,12 +142,10 @@ def findMinWeightCharacteristic(cipher, parameters):
     while not reachedTimelimit(start_time, parameters["timelimit"]) and \
         parameters["sweight"] < MAX_WEIGHT:
 
-        print("Weight: {} Time: {}s".format(parameters["sweight"],
-                                            round(time.time() - start_time, 2)))
+        print(f"Weight: {parameters['sweight']} Time: {round(time.time() - start_time, 2)}s")
 
         # Construct problem instance for given parameters
-        stp_file = "tmp/{}{}.stp".format(cipher.name,
-                                         parameters["wordsize"])
+        stp_file = f"tmp/{cipher.name}{parameters['wordsize']}.stp"
         cipher.createSTP(stp_file, parameters)
 
         result = ""
@@ -164,12 +160,9 @@ def findMinWeightCharacteristic(cipher, parameters):
         if foundSolution(result):
             current_time = round(time.time() - start_time, 2)
             print("---")
-            print(("Characteristic for {} - Rounds {} - Wordsize {} - "
-                   "Weight {} - Time {}s".format(cipher.name,
-                                                 parameters["rounds"],
-                                                 parameters["wordsize"],
-                                                 parameters["sweight"],
-                                                 current_time)))
+            print(f"Characteristic for {cipher.name} - Rounds {parameters['rounds']} - "
+                   f"Wordsize {parameters['wordsize']} - Weight {parameters['sweight']} - "
+                   f"Time {current_time}s")
             characteristic = ""
             if parameters["boolector"]:
                 characteristic = parsesolveroutput.getCharBoolectorOutput(
@@ -188,29 +181,29 @@ def findMinWeightCharacteristic(cipher, parameters):
                     dot_file.write("digraph graphname {")
                     dot_file.write(characteristic.getDOTString())
                     dot_file.write("}")
-                print("Wrote .dot to {}".format(parameters["dot"]))
+                print(f"Wrote .dot to {parameters['dot']}")
                 
             if parameters["latex"]:
                 with open(parameters["latex"], "w") as tex_file:
                     tex_file.write(characteristic.getTexString())
-                print("Wrote .tex to {}".format(parameters["latex"]))                
+                print(f"Wrote .tex to {parameters['latex']}")                
             break
         parameters["sweight"] += 1
     return parameters["sweight"]
 
 
-def findAllCharacteristics(cipher, parameters):
+def findAllCharacteristics(cipher: AbstractCipher, parameters: Dict[str, Any]) -> None:
     """
     Outputs all characteristics of a specific weight by excluding
     solutions iteratively.
     """
-    rnd_string_tmp = '%030x' % random.randrange(16**30)
+    rnd_string_tmp = f"{random.randrange(16**30):030x}"
     start_time = time.time()
     total_num_characteristics = 0
 
     while not reachedTimelimit(start_time, parameters["timelimit"]) and \
           parameters["sweight"] != parameters["endweight"]:
-        stp_file = "tmp/{}{}.stp".format(cipher.name, rnd_string_tmp)
+        stp_file = f"tmp/{cipher.name}{rnd_string_tmp}.stp"
 
         # Start STP TODO: add boolector support
         cipher.createSTP(stp_file, parameters)
@@ -225,11 +218,8 @@ def findAllCharacteristics(cipher, parameters):
 
         # Check for solution
         if foundSolution(result):
-            print(("Characteristic for {} - Rounds {} - Wordsize {}- "
-                   "Weight {}".format(cipher.name,
-                                      parameters["rounds"],
-                                      parameters["wordsize"],
-                                      parameters["sweight"])))
+            print(f"Characteristic for {cipher.name} - Rounds {parameters['rounds']} - "
+                   f"Wordsize {parameters['wordsize']}- Weight {parameters['sweight']}")
 
             characteristic = ""
             if parameters["boolector"]:
@@ -245,8 +235,7 @@ def findAllCharacteristics(cipher, parameters):
             characteristic.printText()
             parameters["blockedCharacteristics"].append(characteristic)
         else:
-            print("Found {} characteristics with weight {}".format(
-                total_num_characteristics, parameters["sweight"]))
+            print(f"Found {total_num_characteristics} characteristics with weight {parameters['sweight']}")
             parameters["sweight"] += 1
             total_num_characteristics = 0
             continue
@@ -262,32 +251,32 @@ def findAllCharacteristics(cipher, parameters):
                 dot_graph += characteristic.getDOTString()
             dot_file.write(dot_graph)
             dot_file.write("}")
-        print("Wrote .dot to {}".format(parameters["dot"]))
+        print(f"Wrote .dot to {parameters['dot']}")
         
     return
 
-def searchCharacteristics(cipher, parameters):
+def searchCharacteristics(cipher: AbstractCipher, parameters: Dict[str, Any]) -> None:
     """
     Searches for differential characteristics of minimal weight
     for an increasing number of rounds.
     """
     while True:
-        print("Number of rounds: {}".format(parameters["rounds"]))
+        print(f"Number of rounds: {parameters['rounds']}")
         parameters["sweight"] = findMinWeightCharacteristic(cipher, parameters)
         print("Rounds:")
         parameters["rounds"] = parameters["rounds"] + 1
     return
 
-def reachedTimelimit(start_time, timelimit):
+def reachedTimelimit(start_time: float, timelimit: int) -> bool:
     """
     Return True if the timelimit was reached.
     """
     if round(time.time() - start_time) >= timelimit and timelimit != -1:
-        print("Reached the time limit of {} seconds".format(timelimit))
+        print(f"Reached the time limit of {timelimit} seconds")
         return True
     return False
 
-def countSolutionsLogfile(logfile_path):
+def countSolutionsLogfile(logfile_path: str) -> int:
     """
     Count the number of solutions in a CryptoMiniSat Logfile
     """
@@ -299,7 +288,7 @@ def countSolutionsLogfile(logfile_path):
         return logged_solutions
     return -1
 
-def startSATsolver(stp_file):
+def startSATsolver(stp_file: str) -> subprocess.Popen:
     """
     Return CryptoMiniSat process started with the given stp_file.
     """
@@ -316,7 +305,7 @@ def startSATsolver(stp_file):
 
     return sat_process
 
-def solveSTP(stp_file):
+def solveSTP(stp_file: str) -> str:
     """
     Returns the solution for the given SMT problem using STP.
     """
@@ -325,7 +314,7 @@ def solveSTP(stp_file):
 
     return result.decode("utf-8")
 
-def solveBoolector(stp_file):
+def solveBoolector(stp_file: str) -> str:
     """
     Returns the solution for the given SMT problem using boolector.
     """
@@ -343,7 +332,7 @@ def solveBoolector(stp_file):
 
     return decoded_result
 
-def solveBitwuzla(stp_file):
+def solveBitwuzla(stp_file: str) -> str:
     """
     Returns the solution for the given SMT problem using bitwuzla.
     """
@@ -372,7 +361,7 @@ def solveBitwuzla(stp_file):
     
     return decoded_result
 
-def foundSolution(solver_result):
+def foundSolution(solver_result: str) -> bool:
     """
     Check if a solution was found.
     """
