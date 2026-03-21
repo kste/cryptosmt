@@ -31,7 +31,7 @@ def computeProbabilityOfDifferentials(cipher: AbstractCipher, parameters: Dict[s
     start_time = time.time()
 
     while not reachedTimelimit(start_time, parameters["timelimit"]) and \
-        parameters["sweight"] < MAX_WEIGHT:
+        parameters["sweight"] < parameters["endweight"]:
 
         if os.path.isfile(sat_logfile):
             os.remove(sat_logfile)
@@ -140,7 +140,7 @@ def findMinWeightCharacteristic(cipher: AbstractCipher, parameters: Dict[str, An
     start_time = time.time()
 
     while not reachedTimelimit(start_time, parameters["timelimit"]) and \
-        parameters["sweight"] < MAX_WEIGHT:
+        parameters["sweight"] < parameters["endweight"]:
 
         print(f"Weight: {parameters['sweight']} Time: {round(time.time() - start_time, 2)}s")
 

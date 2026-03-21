@@ -55,3 +55,21 @@ def test_simon_iterative_search(run_cryptosmt):
     assert result.returncode == 0
     assert "Weight: 18" in result.stdout
     assert "Characteristic for simon - Rounds 8" in result.stdout
+
+@pytest.mark.skipif(not solver_available(), reason="Solver not found")
+def test_simon_probability_estimation(run_cryptosmt):
+    """
+    Tests mode 4 (probability estimation) for Simon-32 13 rounds.
+    We limit the search to weight 40 to ensure it finishes very fast.
+    """
+    yaml_path = "examples/simon/simon32_13rounds_diff.yaml"
+    # --endweight 41 means it will search weights 36, 37, 38, 39, 40
+    args = ["--inputfile", yaml_path, "--endweight", "41"]
+    
+    result = run_cryptosmt(args)
+    
+    assert result.returncode == 0
+    # From dry run: weight 40 ends with 190 total trails found
+    assert "Trails found: 190" in result.stdout
+    # Probability at weight 40 should be ~ -31.66
+    assert "Current Probability: -31.66" in result.stdout
