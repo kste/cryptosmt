@@ -39,11 +39,10 @@ class SimonLinearCipher(AbstractCipher):
         weight = parameters["sweight"]
 
         # Replace with custom if set in parameters.
-        if "rotationconstants" in parameters:
-            self.rot_alpha = parameters["rotationconstants"][0] 
+        if "rotationconstants" in parameters and parameters["rotationconstants"] is not None:
+            self.rot_alpha = parameters["rotationconstants"][0]
             self.rot_beta = parameters["rotationconstants"][1]
             self.rot_gamma = parameters["rotationconstants"][2]
-
         with open(stp_filename, 'w') as stp_file:
             header = ("% Input File for STP\n% Simon w={} alpha={} beta={}"
                       " gamma={} rounds={}\n\n\n".format(wordsize,

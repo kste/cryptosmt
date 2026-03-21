@@ -4,20 +4,43 @@ Created on Mar 28, 2014
 @author: stefan
 '''
 
+# Structured configuration refactoring
 from cryptanalysis import search
-from ciphers import (simon, speck, simonlinear, keccak, keccakdiff,
-                     siphash, simonrk, chaskeymachalf, simonkeyrc,
-                     ketje, ascon, salsa, chacha, skinny, skinnyrk, gimli,
-                     present, craft, craftlinear, trifle, trifle, triflerk)
+from ciphers import simon, speck, simonlinear, keccak, keccakdiff, \
+    siphash, simonrk, chaskeymachalf, simonkeyrc, ketje, ascon, salsa, \
+    chacha, skinny, skinnyrk, gimli, present, craft, craftlinear, \
+    trifle, triflerk
 from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR, PATH_BITWUZLA
 
 from argparse import ArgumentParser, RawTextHelpFormatter
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Optional, Any
 
 import yaml
 import os
 
+@dataclass
+class ToolParameters:
+    cipher: str = "simon"
+    rounds: int = 5
+    mode: int = 0
+    wordsize: int = 16
+    blocksize: int = 64
+    sweight: int = 0
+    endweight: int = 1000
+    iterative: bool = False
+    boolector: bool = False
+    bitwuzla: bool = False
+    dot: Optional[str] = None
+    latex: Optional[str] = None
+    nummessages: int = 1
+    timelimit: int = -1
+    fixedVariables: Dict[str, str] = field(default_factory=dict)
+    blockedCharacteristics: List[Any] = field(default_factory=list)
+    rotationconstants: Optional[List[int]] = None
 
-def startsearch(tool_parameters):
+
+def startsearch(params: ToolParameters):
     """
     Starts the search tool for the given parameters
     """
@@ -46,23 +69,26 @@ def startsearch(tool_parameters):
 
     cipher = None
 
-    if tool_parameters["cipher"] in cipher_suite:
-        cipher = cipher_suite[tool_parameters["cipher"]]
+    if params.cipher in cipher_suite:
+        cipher = cipher_suite[params.cipher]
     else:
-        print("Cipher not supported!")
+        print(f"Cipher {params.cipher} not supported!")
         return
 
+    # For compatibility with existing search module which expects a dict
+    params_dict = asdict(params)
+
     # Handle program flow
-    if tool_parameters["mode"] == 0:
-        search.findMinWeightCharacteristic(cipher, tool_parameters)
-    elif tool_parameters["mode"] == 1:
-        search.searchCharacteristics(cipher, tool_parameters)
-    elif tool_parameters["mode"] == 2:
-        search.findAllCharacteristics(cipher, tool_parameters)
-    elif tool_parameters["mode"] == 3:
-        search.findBestConstants(cipher, tool_parameters)
-    elif tool_parameters["mode"] == 4:
-        search.computeProbabilityOfDifferentials(cipher, tool_parameters)
+    if params.mode == 0:
+        search.findMinWeightCharacteristic(cipher, params_dict)
+    elif params.mode == 1:
+        search.searchCharacteristics(cipher, params_dict)
+    elif params.mode == 2:
+        search.findAllCharacteristics(cipher, params_dict)
+    elif params.mode == 3:
+        search.findBestConstants(cipher, params_dict)
+    elif params.mode == 4:
+        search.computeProbabilityOfDifferentials(cipher, params_dict)
 
     return
 
@@ -75,100 +101,85 @@ def checkenviroment():
         os.makedirs("./tmp/")
 
     if not os.path.exists(PATH_STP):
-        print("ERROR: Could not find STP binary, please check config.py")
+        print(f"ERROR: Could not find STP binary at {PATH_STP}, please check config.py")
         exit()
 
     if not os.path.exists(PATH_CRYPTOMINISAT):
-        print("WARNING: Could not find CRYPTOMINISAT binary, please check "
-              "config.py.")
+        print(f"WARNING: Could not find CRYPTOMINISAT binary at {PATH_CRYPTOMINISAT}, please check config.py.")
 
     if not os.path.exists(PATH_BOOLECTOR):
-        print("WARNING: Could not find BOOLECTOR binary, \"--boolector\" "
-              "option not available.")
+        print(f"WARNING: Could not find BOOLECTOR binary at {PATH_BOOLECTOR}, \"--boolector\" option not available.")
 
     if not os.path.exists(PATH_BITWUZLA):
-        print("WARNING: Could not find BITWUZLA binary, \"--bitwuzla\" "
-              "option not available.")
+        print(f"WARNING: Could not find BITWUZLA binary at {PATH_BITWUZLA}, \"--bitwuzla\" option not available.")
 
     return
 
 
-def loadparameters(args):
+def loadparameters(args) -> ToolParameters:
     """
     Get parameters from the argument list and inputfile.
     """
-    # Load default values
-    params = {"cipher" : "simon",
-              "rounds" : 5,
-              "mode" : 0,
-              "wordsize" : 16,
-              "blocksize" : 64,
-              "sweight" : 0,
-              "endweight" : 1000,
-              "iterative" : False,
-              "boolector" : False,
-              "bitwuzla" : False,
-              "dot" : None,
-              "latex" : None,
-              "nummessages" : 1,
-              "timelimit" : -1,
-              "fixedVariables" : {},
-              "blockedCharacteristics" : []}
+    params = ToolParameters()
 
     # Check if there is an input file specified
     if args.inputfile:
         with open(args.inputfile[0], 'r') as input_file:
             doc = yaml.load(input_file, Loader=yaml.SafeLoader)
-            params.update(doc)
-            if "fixedVariables" in doc:
-                fixed_vars = {}
-                for variable in doc["fixedVariables"]:
-                    fixed_vars = dict(list(fixed_vars.items()) +
-                                      list(variable.items()))
-                params["fixedVariables"] = fixed_vars
+            
+            # Update params from yaml
+            for key, value in doc.items():
+                if hasattr(params, key):
+                    if key == "fixedVariables":
+                        fixed_vars = {}
+                        for variable in value:
+                            fixed_vars.update(variable)
+                        params.fixedVariables = fixed_vars
+                    else:
+                        setattr(params, key, value)
 
     # Override parameters if they are set on commandline
-    if args.cipher:
-        params["cipher"] = args.cipher[0]
+    if args.cipher is not None:
+        params.cipher = args.cipher[0]
 
-    if args.rounds:
-        params["rounds"] = args.rounds[0]
+    if args.rounds is not None:
+        params.rounds = args.rounds[0]
 
-    if args.wordsize:
-        params["wordsize"] = args.wordsize[0]
+    if args.wordsize is not None:
+        params.wordsize = args.wordsize[0]
 
-    if args.blocksize:
-        params["blocksize"] = args.blocksize[0]        
+    if args.blocksize is not None:
+        params.blocksize = args.blocksize[0]        
 
-    if args.sweight:
-        params["sweight"] = args.sweight[0]
+    if args.sweight is not None:
+        params.sweight = args.sweight[0]
 
-    if args.endweight:
-        params["endweight"] = args.endweight[0]
+    if args.endweight is not None:
+        params.endweight = args.endweight[0]
 
-    if args.mode:
-        params["mode"] = args.mode[0]
+    if args.mode is not None:
+        params.mode = args.mode[0]
 
-    if args.timelimit:
-        params["timelimit"] = args.timelimit[0]
+    if args.timelimit is not None:
+        params.timelimit = args.timelimit[0]
 
     if args.iterative:
-        params["iterative"] = args.iterative
+        params.iterative = args.iterative
 
     if args.boolector:
-        params["boolector"] = args.boolector
+        params.boolector = args.boolector
 
     if args.bitwuzla:
-        params["bitwuzla"] = args.bitwuzla
+        params.bitwuzla = args.bitwuzla
 
-    if args.nummessages:
-        params["nummessages"] = args.nummessages[0]
+    if args.nummessages is not None:
+        params.nummessages = args.nummessages[0]
 
-    if args.dot:
-        params["dot"] = args.dot[0]
+    if args.dot is not None:
+        params.dot = args.dot[0]
 
-    if args.latex:
-        params["latex"] = args.latex[0]
+    if args.latex is not None:
+        params.latex = args.latex[0]
 
     return params
 

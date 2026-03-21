@@ -38,7 +38,7 @@ class SimonCipher(AbstractCipher):
         weight = parameters["sweight"]
 
         # Replace with custom if set in parameters.
-        if "rotationconstants" in parameters:
+        if "rotationconstants" in parameters and parameters["rotationconstants"] is not None:
             self.rot_alpha = parameters["rotationconstants"][0]
             self.rot_beta = parameters["rotationconstants"][1]
             self.rot_gamma = parameters["rotationconstants"][2]

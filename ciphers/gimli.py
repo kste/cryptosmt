@@ -47,7 +47,7 @@ class GimliCipher(AbstractCipher):
         rounds = parameters["rounds"]
         weight = parameters["sweight"]
 
-        if "rotationconstants" in parameters:
+        if "rotationconstants" in parameters and parameters["rotationconstants"] is not None:
             self.d = parameters["rotationconstants"][0]
             self.e = parameters["rotationconstants"][1]
             self.f = parameters["rotationconstants"][2]

@@ -36,12 +36,9 @@ class SpeckeyCipher(AbstractCipher):
         rounds = parameters["rounds"]
         weight = parameters["sweight"]
 
-        #if wordsize == 16:
-        #    self.rot_alpha = 7
-        #    self.rot_beta = 2
-        #elif "rotationconstants" in parameters:
-        #    self.rot_alpha = parameters["rotationconstants"][0]
-        #    self.rot_beta = parameters["rotationconstants"][1]
+        if "rotationconstants" in parameters and parameters["rotationconstants"] is not None:
+            self.rot_alpha = parameters["rotationconstants"][0]
+            self.rot_beta = parameters["rotationconstants"][1]
 
         with open(stp_filename, 'w') as stp_file:
             stp_file.write("% Input File for STP\n% Speckey w={} alpha={} beta={} "
