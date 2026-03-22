@@ -78,7 +78,7 @@ def getStringForNonZero(variables: List[str], wordsize: int) -> str:
     Asserts that no all-zero characteristic is allowed
     """
     command = "ASSERT(NOT(("
-    command += "|".join(variables)
+    command += " | ".join(variables)
     command += f") = 0bin{'0' * wordsize}));"
     return command
 

@@ -47,68 +47,44 @@ class SkinnyCipher(AbstractCipher):
         """
         Returns the print format.
         """
-        # return ['SC', 'SR', 'MC', 'w']
         return ['x', 'y', 'z', 'w']
 
-    def createSTP(self, stp_filename, parameters):
+    def write_header(self, stp_file, parameters):
         """
-        Creates an STP file to find a differnetial trail for Skinny with
-        the given parameters.
+        Custom header for Skinny.
         """
-
         blocksize = parameters["blocksize"]
-        wordsize = parameters["wordsize"]
+        header = ("% Input File for STP\n% Skinny w={}"
+                  "rounds={}\n\n\n".format(blocksize, parameters["rounds"]))
+        stp_file.write(header)
+
+    def setup_variables(self, stp_file, parameters):
+        """
+        Declare variables in the STP file.
+        """
+        blocksize = parameters["blocksize"]
         rounds = parameters["rounds"]
-        weight = parameters["sweight"]
+        
+        self.sc = self.declare_variable_vector(stp_file, "x", rounds, blocksize, is_state=True)
+        self.sr = self.declare_variable_vector_per_round(stp_file, "y", rounds, blocksize)
+        self.mc = self.declare_variable_vector_per_round(stp_file, "z", rounds, blocksize)
+        self.w = self.declare_variable_vector_per_round(stp_file, "w", rounds, blocksize, is_weight=True)
 
-        if blocksize != 64:
-            print("Only blocksize of 64-bit supported.")
-            exit(1)
+    def apply_round_constraints(self, stp_file, round_nr, parameters):
+        """
+        Apply Skinny round constraints.
+        """
+        blocksize = parameters["blocksize"]
+        self.setupSkinnyRound(stp_file, self.sc[round_nr], self.sr[round_nr], 
+                              self.mc[round_nr], self.sc[round_nr+1], 
+                              self.w[round_nr], blocksize)
 
-        with open(stp_filename, 'w') as stp_file:
-            header = ("% Input File for STP\n% Skinny w={}"
-                      "rounds={}\n\n\n".format(blocksize, rounds))
-            stp_file.write(header)
-
-            # Setup variables
-            # sc = ["SC{}".format(i) for i in range(rounds + 1)]
-            # sr = ["SR{}".format(i) for i in range(rounds)]
-            # mc = ["MC{}".format(i) for i in range(rounds)]
-            sc = ["x{}".format(i) for i in range(rounds + 1)]
-            sr = ["y{}".format(i) for i in range(rounds)]
-            mc = ["z{}".format(i) for i in range(rounds)]
-
-            # w = weight
-            w = ["w{}".format(i) for i in range(rounds)]
-
-            stpcommands.setupVariables(stp_file, sc, blocksize)
-            stpcommands.setupVariables(stp_file, sr, blocksize)
-            stpcommands.setupVariables(stp_file, mc, blocksize)
-            stpcommands.setupVariables(stp_file, w, blocksize)
-
-            stpcommands.setupWeightComputation(stp_file, weight, w, blocksize)
-
-            for i in range(rounds):
-                self.setupSkinnyRound(stp_file, sc[i], sr[i], mc[i], sc[i+1], 
-                                      w[i], blocksize)
-
-            # No all zero characteristic
-            stpcommands.assertNonZero(stp_file, sc, blocksize)
-
-            # Iterative characteristics only
-            # Input difference = Output difference
-            if parameters["iterative"]:
-                stpcommands.assertVariableValue(stp_file, sc[0], sc[rounds])
-
-            for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
-
-            for char in parameters["blockedCharacteristics"]:
-                stpcommands.blockCharacteristic(stp_file, char, blocksize)
-
-            stpcommands.setupQuery(stp_file)
-
-        return
+    def apply_iterative_constraints(self, stp_file, parameters):
+        """
+        Iterative constraint for Skinny.
+        """
+        rounds = parameters["rounds"]
+        stpcommands.assertVariableValue(stp_file, self.sc[0], self.sc[rounds])
 
     def setupSkinnyRound(self, stp_file, sc_in, sr, mc, sc_out, w, blocksize):
         """
@@ -129,7 +105,6 @@ class SkinnyCipher(AbstractCipher):
                          "{0}[{1}:{1}]".format(w, 4*i + 2),
                          "{0}[{1}:{1}]".format(w, 4*i + 1),
                          "{0}[{1}:{1}]".format(w, 4*i + 0)]
-            #command += stpcommands.add4bitSbox(self.skinny_sbox, variables)
             command += self.constraints_by_skinny_sbox(variables)
 
         # ShiftRows

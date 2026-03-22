@@ -29,69 +29,52 @@ class SimonCipher(AbstractCipher):
         """
         return ['x', 'y', 'w']
 
-    def createSTP(self, stp_filename, parameters):
+    def write_header(self, stp_file, parameters):
         """
-        Creates an STP file to find a characteristic for SIMON with
-        the given parameters.
+        Custom header for Simon with rotation constants.
         """
-
-        wordsize = parameters["wordsize"]
-        rounds = parameters["rounds"]
-        weight = parameters["sweight"]
-
         # Replace with custom if set in parameters.
-        if "rotationconstants" in parameters:
+        if "rotationconstants" in parameters and parameters["rotationconstants"]:
             self.rot_alpha = parameters["rotationconstants"][0]
             self.rot_beta = parameters["rotationconstants"][1]
             self.rot_gamma = parameters["rotationconstants"][2]
 
-        with open(stp_filename, 'w') as stp_file:
-            header = ("% Input File for STP\n% Simon w={} alpha={} beta={}"
-                      " gamma={} rounds={}\n\n\n".format(wordsize,
-                                                         self.rot_alpha,
-                                                         self.rot_beta,
-                                                         self.rot_gamma,
-                                                         rounds))
-            stp_file.write(header)
+        header = ("% Input File for STP\n% Simon w={} alpha={} beta={}"
+                  " gamma={} rounds={}\n\n\n".format(parameters["wordsize"],
+                                                     self.rot_alpha,
+                                                     self.rot_beta,
+                                                     self.rot_gamma,
+                                                     parameters["rounds"]))
+        stp_file.write(header)
 
-            # Setup variables
-            # x = left, y = right
-            x = ["x{}".format(i) for i in range(rounds + 1)]
-            y = ["y{}".format(i) for i in range(rounds + 1)]
-            and_out = ["andout{}".format(i) for i in range(rounds + 1)]
+    def setup_variables(self, stp_file, parameters):
+        """
+        Declare variables in the STP file.
+        """
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        
+        self.x = self.declare_variable_vector(stp_file, "x", rounds, wordsize, is_state=True)
+        self.y = self.declare_variable_vector(stp_file, "y", rounds, wordsize, is_state=True)
+        self.and_out = self.declare_variable_vector(stp_file, "andout", rounds, wordsize)
+        self.w = self.declare_variable_vector_per_round(stp_file, "w", rounds, wordsize, is_weight=True)
 
-            # w = weight
-            w = ["w{}".format(i) for i in range(rounds)]
+    def apply_round_constraints(self, stp_file, round_nr, parameters):
+        """
+        Simon round logic.
+        """
+        wordsize = parameters["wordsize"]
+        self.setupSimonRound(stp_file, self.x[round_nr], self.y[round_nr], 
+                             self.x[round_nr+1], self.y[round_nr+1],
+                             self.and_out[round_nr], self.w[round_nr], wordsize)
 
-            stpcommands.setupVariables(stp_file, x, wordsize)
-            stpcommands.setupVariables(stp_file, y, wordsize)
-            stpcommands.setupVariables(stp_file, and_out, wordsize)
-            stpcommands.setupVariables(stp_file, w, wordsize)
-
-            stpcommands.setupWeightComputation(stp_file, weight, w, wordsize)
-
-            for i in range(rounds):
-                self.setupSimonRound(stp_file, x[i], y[i], x[i+1], y[i+1],
-                                     and_out[i], w[i], wordsize)
-
-            # No all zero characteristic
-            stpcommands.assertNonZero(stp_file, x + y, wordsize)
-
-            # Iterative characteristics only
-            # Input difference = Output difference
-            if parameters["iterative"]:
-                stpcommands.assertVariableValue(stp_file, x[0], x[rounds])
-                stpcommands.assertVariableValue(stp_file, y[0], y[rounds])
-
-            for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
-
-            for char in parameters["blockedCharacteristics"]:
-                stpcommands.blockCharacteristic(stp_file, char, wordsize)
-
-            stpcommands.setupQuery(stp_file)
-
-        return
+    def apply_iterative_constraints(self, stp_file, parameters):
+        """
+        Iterative constraint for Simon.
+        """
+        rounds = parameters["rounds"]
+        stpcommands.assertVariableValue(stp_file, self.x[0], self.x[rounds])
+        stpcommands.assertVariableValue(stp_file, self.y[0], self.y[rounds])
 
     def setupSimonRound(self, stp_file, x_in, y_in, x_out, y_out, and_out, w,
                         wordsize):

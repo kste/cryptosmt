@@ -38,13 +38,13 @@ class KeccakCipher(AbstractCipher):
                 's03', 's13', 's23', 's33', 's43',
                 's04', 's14', 's24', 's34', 's44']
 
-    def createSTP(self, stp_filename, parameters):
+    def write_header(self, stp_file, parameters):
         """
-        Creates an STP file to find a preimage for Keccak.
+        Custom header for Keccak.
         """
         wordsize = parameters["wordsize"]
         rounds = parameters["rounds"]
-
+        
         # Default rate and capacity
         capacity = 160
         rate = (wordsize * 25) - capacity
@@ -55,45 +55,62 @@ class KeccakCipher(AbstractCipher):
         if "capacity" in parameters:
             capacity = parameters["capacity"]
 
-        assert (rate + capacity) == wordsize * 25            
+        header = ("% Input File for STP\n% Keccak w={} rate={} "
+                  "capacity={}\n\n\n".format(wordsize, rate, capacity,
+                                              rounds))
+        stp_file.write(header)
 
-        with open(stp_filename, 'w') as stp_file:
-            stp_file.write("% Input File for STP\n% Keccak w={} rate={} "
-                           "capacity={}\n\n\n".format(wordsize, rate, capacity,
-                                                      rounds))
-
-            # Setup variables
-            # 5x5 lanes of wordsize
-            s = ["s{}{}{}".format(x, y, i) for i in range(rounds + 1)
+    def setup_variables(self, stp_file, parameters):
+        """
+        Declare variables for Keccak.
+        """
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        
+        # Setup variables
+        # 5x5 lanes of wordsize
+        self.s = ["s{}{}{}".format(x, y, i) for i in range(rounds + 1)
                  for y in range(5) for x in range(5)]
-            a = ["a{}{}{}".format(x, y, i) for i in range(rounds + 1)
+        self.a = ["a{}{}{}".format(x, y, i) for i in range(rounds + 1)
                  for y in range(5) for x in range(5)]
-            b = ["b{}{}{}".format(x, y, i) for i in range(rounds + 1)
+        self.b = ["b{}{}{}".format(x, y, i) for i in range(rounds + 1)
                  for y in range(5) for x in range(5)]
-            c = ["c{}{}".format(x, i) for i in range(rounds + 1) for x in range(5)]
-            d = ["d{}{}".format(x, i) for i in range(rounds + 1) for x in range(5)]
+        self.c = ["c{}{}".format(x, i) for i in range(rounds + 1) for x in range(5)]
+        self.d = ["d{}{}".format(x, i) for i in range(rounds + 1) for x in range(5)]
 
-            stpcommands.setupVariables(stp_file, s, wordsize)
-            stpcommands.setupVariables(stp_file, a, wordsize)
-            stpcommands.setupVariables(stp_file, b, wordsize)
-            stpcommands.setupVariables(stp_file, c, wordsize)
-            stpcommands.setupVariables(stp_file, d, wordsize)
+        stpcommands.setupVariables(stp_file, self.s, wordsize)
+        stpcommands.setupVariables(stp_file, self.a, wordsize)
+        stpcommands.setupVariables(stp_file, self.b, wordsize)
+        stpcommands.setupVariables(stp_file, self.c, wordsize)
+        stpcommands.setupVariables(stp_file, self.d, wordsize)
+        
+        # Non-zero on state
+        self.state_variables = self.s
 
-            # Fix variables for capacity, only works if rate/capacity 
-            # is multiple of wordsize
-            for i in range(rate // wordsize, (rate + capacity) // wordsize):
-                stpcommands.assertVariableValue(stp_file, s[i], "0hex{}".format(
-                    "0" * (wordsize // 4)))
+    def apply_constraints(self, stp_file, parameters):
+        """
+        Override to handle fixed capacity before round loop.
+        """
+        wordsize = parameters["wordsize"]
+        capacity = parameters.get("capacity", 160)
+        rate = (wordsize * 25) - capacity
+        if "rate" in parameters:
+            rate = parameters["rate"]
 
-            for rnd in range(rounds):
-                self.setupKeccakRound(stp_file, rnd, s, a, b, c, d, wordsize)
+        # Fix variables for capacity
+        for i in range(rate // wordsize, (rate + capacity) // wordsize):
+            stpcommands.assertVariableValue(stp_file, self.s[i], "0hex{}".format(
+                "0" * (wordsize // 4)))
+        
+        # Call parent apply_constraints which handles the round loop
+        super().apply_constraints(stp_file, parameters)
 
-            for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
-
-            stpcommands.setupQuery(stp_file)
-
-        return
+    def apply_round_constraints(self, stp_file, round_nr, parameters):
+        """
+        Keccak round constraints.
+        """
+        wordsize = parameters["wordsize"]
+        self.setupKeccakRound(stp_file, round_nr, self.s, self.a, self.b, self.c, self.d, wordsize)
 
     def setupKeccakRound(self, stp_file, rnd, s, a, b, c, d, wordsize):
         """
@@ -101,44 +118,40 @@ class KeccakCipher(AbstractCipher):
         """
         command = ""
 
-        #Compute Parity for each column
-        for i in range(5):
+        # Theta
+        for x in range(5):
+            # c[x] = s[x,0] xor s[x,1] xor s[x,2] xor s[x,3] xor s[x,4]
             command += "ASSERT({} = BVXOR({}, BVXOR({}, BVXOR({}, BVXOR({}, {})))));\n".format(
-                c[i + 5*rnd], s[i + 5*0 + 25*rnd], s[i + 5*1 + 25*rnd],
-                s[i + 5*2 + 25*rnd], s[i + 5*3 + 25*rnd], s[i + 5*4 + 25*rnd])
+                c[5*rnd + x], s[25*rnd + 5*0 + x], s[25*rnd + 5*1 + x],
+                s[25*rnd + 5*2 + x], s[25*rnd + 5*3 + x], s[25*rnd + 5*4 + x])
 
-        #Compute intermediate values
-        for i in range(5):
+        for x in range(5):
+            # d[x] = c[x-1] xor rot(c[x+1], 1)
             command += "ASSERT({} = BVXOR({}, {}));\n".format(
-                d[i + 5*rnd], c[(i - 1) % 5 + 5*rnd],
-                rotl(c[(i + 1) % 5 + 5*rnd], 1, wordsize))
+                d[5*rnd + x], c[5*rnd + (x - 1) % 5],
+                rotl(c[5*rnd + (x + 1) % 5], 1, wordsize))
 
-        #Rho and Pi
         for x in range(5):
             for y in range(5):
-                #x + 5*y + 25*rnd -> y + 5*((2*x + 3*y) % 5) + 25*rnd
-                new_b_index = y + 5*((2*x + 3*y) % 5) + 25*rnd
-                tmp_xor = "BVXOR({}, {})".format(s[x + 5*y + 25*rnd], d[x + 5*rnd])
+                # a[x,y] = s[x,y] xor d[x]
+                command += "ASSERT({} = BVXOR({}, {}));\n".format(
+                    a[25*rnd + 5*y + x], s[25*rnd + 5*y + x], d[5*rnd + x])
+
+        # Rho and Phi
+        for x in range(5):
+            for y in range(5):
+                # b[y, 2x+3y] = rot(a[x,y], RO[x,y])
                 command += "ASSERT({} = {});\n".format(
-                    b[new_b_index], rotl(tmp_xor, self.RO[x][y], wordsize))
+                    b[25*rnd + 5*((2*x + 3*y) % 5) + y],
+                    rotl(a[25*rnd + 5*y + x], self.RO[y][x], wordsize))
 
-        #Chi
+        # Chi
         for x in range(5):
             for y in range(5):
-                chiTmp = "BVXOR({}, ~{} & {})".format(b[(x + 0) % 5 + 5*y + 25*rnd],
-                                                      b[(x + 1) % 5 + 5*y + 25*rnd],
-                                                      b[(x + 2) % 5 + 5*y + 25*rnd])
-                command += "ASSERT({} = {});\n".format(a[x + 5*y + 25*rnd], chiTmp)
-
-        #Add rnd constant
-        for x in range(5):
-            for y in range(5):
-                if x == 0 and y == 0:
-                    command += "ASSERT({} = BVXOR({}, {}));\n".format(
-                        s[25*(rnd + 1)], a[25*rnd], self.RC[rnd])
-                else:
-                    command += "ASSERT({} = {});\n".format(
-                        s[x + 5*y + 25*(rnd + 1)], a[x + 5*y + 25*rnd])
+                # s[x,y] = b[x,y] xor (not b[x+1,y] and b[x+2,y])
+                command += "ASSERT({} = BVXOR({}, (~{} & {})));\n".format(
+                    s[25*(rnd+1) + 5*y + x], b[25*rnd + 5*y + x],
+                    b[25*rnd + 5*y + (x + 1) % 5], b[25*rnd + 5*y + (x + 2) % 5])
 
         stp_file.write(command)
         return
