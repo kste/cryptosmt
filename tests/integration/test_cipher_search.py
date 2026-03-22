@@ -34,13 +34,15 @@ def test_cipher_find_min_weight(run_cryptosmt, cipher, rounds, wordsize, expecte
     Finds the minimum weight characteristic for a given cipher, rounds, and wordsize.
     Mode 0 (default).
     """
-    # Use bitwuzla if available for speed
-    if "--bitwuzla" not in extra_args and "--boolector" not in extra_args:
-        if os.path.exists("config.py") and "PATH_BITWUZLA" in open("config.py").read():
-             extra_args.append("--bitwuzla")
-
     args = ["--cipher", cipher, "--rounds", str(rounds), "--wordsize", str(wordsize)] + extra_args
-    result = run_cryptosmt(args)
+    
+    # Use bitwuzla if available for speed
+    cmd_args = args.copy()
+    if "--bitwuzla" not in cmd_args and "--boolector" not in cmd_args:
+        if os.path.exists("config.py") and "PATH_BITWUZLA" in open("config.py").read():
+             cmd_args.append("--bitwuzla")
+
+    result = run_cryptosmt(cmd_args)
     
     assert result.returncode == 0
     assert f"Weight: {expected_weight}" in result.stdout
@@ -136,7 +138,8 @@ def test_simon_probability_estimation(run_cryptosmt):
     Reducing rounds to make it faster.
     """
     # Use 4 rounds for Simon-32, starting weight 6
-    args = ["--cipher", "simon", "--rounds", "4", "--wordsize", "16", "--mode", "4", "--sweight", "6", "--endweight", "8", "--bitwuzla"]
+    # Note: Using explicit --stp because only STP supports solve_and_count
+    args = ["--cipher", "simon", "--rounds", "4", "--wordsize", "16", "--mode", "4", "--sweight", "6", "--endweight", "8", "--stp"]
     
     result = run_cryptosmt(args)
     

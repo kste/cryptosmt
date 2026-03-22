@@ -6,6 +6,7 @@ Created on Dec 27, 2016
 
 from parser import stpcommands
 from ciphers.cipher import AbstractCipher
+from ciphers import components
 
 
 class PresentCipher(AbstractCipher):
@@ -24,90 +25,63 @@ class PresentCipher(AbstractCipher):
         """
         return ['S', 'P', 'w']
 
-    def createSTP(self, stp_filename, parameters):
-        """
-        Creates an STP file to find a characteristic for PRESENT with
-        the given parameters.
-        """
+    # Present S-box
+    present_sbox = [0xc, 5, 6, 0xb, 9, 0, 0xa, 0xd, 3, 0xe, 0xf, 8, 4, 7, 1, 2]
+    
+    # Present Permutation bit mapping
+    # bit i moves to bit P(i)
+    present_permutation = [0, 16, 32, 48, 1, 17, 33, 49, 2, 18, 34, 50, 3, 19, 35, 51,
+                           4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55,
+                           8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59,
+                           12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63]
 
+    def validate_parameters(self, parameters):
+        """
+        Enforce 64-bit wordsize for PRESENT.
+        """
+        if parameters["wordsize"] != 64:
+            parameters["wordsize"] = 64
+
+    def setup_variables(self, stp_file, parameters):
+        """
+        Declare variables for PRESENT.
+        """
         wordsize = parameters["wordsize"]
         rounds = parameters["rounds"]
-        weight = parameters["sweight"]
+        
+        self.s = self.declare_variable_vector(stp_file, "S", rounds, wordsize, is_state=True)
+        self.p = self.declare_variable_vector_per_round(stp_file, "P", rounds, wordsize)
+        self.w = self.declare_variable_vector_per_round(stp_file, "w", rounds, wordsize, is_weight=True)
 
-        if wordsize != 64:
-            print("Only wordsize of 64-bit supported.")
-            exit(1)
-
-        with open(stp_filename, 'w') as stp_file:
-            header = ("% Input File for STP\n% PRESENT w={}"
-                      "rounds={}\n\n\n".format(wordsize, rounds))
-            stp_file.write(header)
-
-            # Setup variables
-            s = ["S{}".format(i) for i in range(rounds + 1)]
-            p = ["P{}".format(i) for i in range(rounds)]
-
-            # w = weight
-            w = ["w{}".format(i) for i in range(rounds)]
-
-            stpcommands.setupVariables(stp_file, s, wordsize)
-            stpcommands.setupVariables(stp_file, p, wordsize)
-            stpcommands.setupVariables(stp_file, w, wordsize)
-
-            stpcommands.setupWeightComputation(stp_file, weight, w, wordsize)
-
-            for i in range(rounds):
-                self.setupPresentRound(stp_file, s[i], p[i], s[i+1], 
-                                      w[i], wordsize)
-
-            # No all zero characteristic
-            stpcommands.assertNonZero(stp_file, s, wordsize)
-
-            # Iterative characteristics only
-            # Input difference = Output difference
-            if parameters["iterative"]:
-                stpcommands.assertVariableValue(stp_file, s[0], s[rounds])
-
-            for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
-
-            for char in parameters["blockedCharacteristics"]:
-                stpcommands.blockCharacteristic(stp_file, char, wordsize)
-
-            stpcommands.setupQuery(stp_file)
-
-        return
-
-    def setupPresentRound(self, stp_file, s_in, p, s_out, w, wordsize):
+    def apply_round_constraints(self, stp_file, round_nr, parameters):
         """
-        Model for differential behaviour of one round PRESENT
+        Apply PRESENT round constraints.
         """
-        command = ""
-
-        #Permutation Layer
-        for i in range(16):
-            command += "ASSERT({0}[{1}:{1}] = {2}[{3}:{3}]);\n".format(p, i*4+0, s_out, i)
-            command += "ASSERT({0}[{1}:{1}] = {2}[{3}:{3}]);\n".format(p, i*4+1, s_out, i+16)
-            command += "ASSERT({0}[{1}:{1}] = {2}[{3}:{3}]);\n".format(p, i*4+2, s_out, i+32)
-            command += "ASSERT({0}[{1}:{1}] = {2}[{3}:{3}]);\n".format(p, i*4+3, s_out, i+48)
-
+        wordsize = parameters["wordsize"]
+        
         # Substitution Layer
-        present_sbox = [0xc, 5, 6, 0xb, 9, 0, 0xa, 0xd, 3, 0xe, 0xf, 8, 4, 7, 1, 2]
         for i in range(16):
-            variables = ["{0}[{1}:{1}]".format(s_in, 4*i + 3),
-                         "{0}[{1}:{1}]".format(s_in, 4*i + 2),
-                         "{0}[{1}:{1}]".format(s_in, 4*i + 1),
-                         "{0}[{1}:{1}]".format(s_in, 4*i + 0),
-                         "{0}[{1}:{1}]".format(p, 4*i + 3),
-                         "{0}[{1}:{1}]".format(p, 4*i + 2),
-                         "{0}[{1}:{1}]".format(p, 4*i + 1),
-                         "{0}[{1}:{1}]".format(p, 4*i + 0),
-                         "{0}[{1}:{1}]".format(w, 4*i + 3),
-                         "{0}[{1}:{1}]".format(w, 4*i + 2),
-                         "{0}[{1}:{1}]".format(w, 4*i + 1),
-                         "{0}[{1}:{1}]".format(w, 4*i + 0)]
-            command += stpcommands.add4bitSbox(present_sbox, variables)
+            inputs = [f"{self.s[round_nr]}[{4*i + 3}:{4*i + 3}]",
+                      f"{self.s[round_nr]}[{4*i + 2}:{4*i + 2}]",
+                      f"{self.s[round_nr]}[{4*i + 1}:{4*i + 1}]",
+                      f"{self.s[round_nr]}[{4*i + 0}:{4*i + 0}]"]
+            outputs = [f"{self.p[round_nr]}[{4*i + 3}:{4*i + 3}]",
+                       f"{self.p[round_nr]}[{4*i + 2}:{4*i + 2}]",
+                       f"{self.p[round_nr]}[{4*i + 1}:{4*i + 1}]",
+                       f"{self.p[round_nr]}[{4*i + 0}:{4*i + 0}]"]
+            weights = [f"{self.w[round_nr]}[{4*i + 3}:{4*i + 3}]",
+                       f"{self.w[round_nr]}[{4*i + 2}:{4*i + 2}]",
+                       f"{self.w[round_nr]}[{4*i + 1}:{4*i + 1}]",
+                       f"{self.w[round_nr]}[{4*i + 0}:{4*i + 0}]"]
+            components.add_4bit_sbox(stp_file, self.present_sbox, inputs, outputs, weights)
 
+        # Permutation Layer
+        components.add_bit_permutation(stp_file, self.p[round_nr], self.s[round_nr+1], 
+                                       self.present_permutation, wordsize)
 
-        stp_file.write(command)
-        return
+    def apply_iterative_constraints(self, stp_file, parameters):
+        """
+        Iterative constraint for PRESENT.
+        """
+        rounds = parameters["rounds"]
+        stpcommands.assertVariableValue(stp_file, self.s[0], self.s[rounds])

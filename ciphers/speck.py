@@ -6,9 +6,7 @@ Created on Mar 28, 2014
 
 from parser import stpcommands
 from ciphers.cipher import AbstractCipher
-
-from parser.stpcommands import getStringRightRotate as rotr
-from parser.stpcommands import getStringLeftRotate as rotl
+from ciphers import components
 
 
 class SpeckCipher(AbstractCipher):
@@ -57,17 +55,35 @@ class SpeckCipher(AbstractCipher):
         self.y = self.declare_variable_vector(stp_file, "y", rounds, wordsize, is_state=True)
         self.w = self.declare_variable_vector_per_round(stp_file, "w", rounds, wordsize, is_weight=True)
         
+        # Temp variables for rotations
+        self.x_rot = [f"x{i}rot" for i in range(rounds)]
+        self.y_rot = [f"y{i}rot" for i in range(rounds)]
+        stpcommands.setupVariables(stp_file, self.x_rot, wordsize)
+        stpcommands.setupVariables(stp_file, self.y_rot, wordsize)
+
         # Speck specific: ignore MSB for weight computation
         parameters["ignore_msbs"] = 1
 
     def apply_round_constraints(self, stp_file, round_nr, parameters):
         """
-        Speck round logic.
+        Speck round logic using components.
         """
         wordsize = parameters["wordsize"]
-        self.setupSpeckRound(stp_file, self.x[round_nr], self.y[round_nr], 
-                             self.x[round_nr+1], self.y[round_nr+1], 
-                             self.w[round_nr], wordsize)
+        
+        # x_rot = x_in >>> alpha
+        components.add_rotation_right(stp_file, self.x_rot[round_nr], self.x[round_nr], self.rot_alpha, wordsize)
+        
+        # x_out = x_rot + y_in
+        components.add_addition(stp_file, self.x_rot[round_nr], self.y[round_nr], self.x[round_nr+1], wordsize)
+        
+        # y_rot = y_in <<< beta
+        components.add_rotation_left(stp_file, self.y_rot[round_nr], self.y[round_nr], self.rot_beta, wordsize)
+        
+        # y_out = x_out xor y_rot
+        components.add_xor(stp_file, self.y[round_nr+1], [self.x[round_nr+1], self.y_rot[round_nr]])
+        
+        # Weight
+        components.add_speck_weight(stp_file, self.w[round_nr], self.x_rot[round_nr], self.y[round_nr], self.x[round_nr+1])
 
     def apply_iterative_constraints(self, stp_file, parameters):
         """
@@ -76,30 +92,3 @@ class SpeckCipher(AbstractCipher):
         rounds = parameters["rounds"]
         stpcommands.assertVariableValue(stp_file, self.x[0], self.x[rounds])
         stpcommands.assertVariableValue(stp_file, self.y[0], self.y[rounds])
-
-    def setupSpeckRound(self, stp_file, x_in, y_in, x_out, y_out, w, wordsize):
-        """
-        Model for differential behaviour of one round SPECK
-        """
-        command = ""
-
-        #Assert(x_in >>> self.rot_alpha + y_in = x_out)
-        command += "ASSERT("
-        command += stpcommands.getStringAdd(rotr(x_in, self.rot_alpha, wordsize),
-                                            y_in, x_out, wordsize)
-        command += ");\n"
-
-        #Assert(x_out xor (y_in <<< self.rot_beta) = x_in)
-        command += "ASSERT(" + y_out + " = "
-        command += "BVXOR(" + x_out + ","
-        command += rotl(y_in, self.rot_beta, wordsize)
-        command += "));\n"
-
-        #For weight computation
-        command += "ASSERT({0} = ~".format(w)
-        command += stpcommands.getStringEq(rotr(x_in, self.rot_alpha, wordsize),
-                                           y_in, x_out)
-        command += ");\n"
-
-        stp_file.write(command)
-        return

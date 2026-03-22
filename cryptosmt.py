@@ -33,6 +33,7 @@ class ToolParameters:
     iterative: bool = False
     boolector: bool = False
     bitwuzla: bool = False
+    stp: bool = False
     dot: Optional[str] = None
     latex: Optional[str] = None
     nummessages: int = 1
@@ -71,9 +72,9 @@ def startsearch(params: ToolParameters):
         del params_dict["rotationconstants"]
     
     # Remove CLI-only fields
-    del params_dict["verbose"]
-    del params_dict["quiet"]
-    del params_dict["list_ciphers"]
+    for field_name in ["verbose", "quiet", "list_ciphers"]:
+        if field_name in params_dict:
+            del params_dict[field_name]
 
     # Handle program flow
     if params.mode == 0:
@@ -175,6 +176,9 @@ def loadparameters(args) -> ToolParameters:
     if args.bitwuzla:
         params.bitwuzla = args.bitwuzla
 
+    if args.stp:
+        params.stp = args.stp
+
     if args.nummessages is not None:
         params.nummessages = args.nummessages[0]
 
@@ -239,6 +243,8 @@ def main():
                         help="Use boolector to find solutions")
     parser.add_argument('--bitwuzla', action="store_true",
                         help="Use bitwuzla to find solutions")
+    parser.add_argument('--stp', action="store_true",
+                        help="Use STP to find solutions (default)")
     parser.add_argument('--inputfile', nargs=1, help="Use an yaml input file to"
                                                      "read the parameters.")
     parser.add_argument('--dot', nargs=1, help="Print the trail in .dot format.")

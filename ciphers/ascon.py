@@ -6,6 +6,7 @@ Created on Dec 18, 2015
 
 from parser import stpcommands
 from ciphers.cipher import AbstractCipher
+from ciphers import components
 
 from parser.stpcommands import getStringLeftRotate as rotl
 from parser.stpcommands import getStringRightRotate as rotr
@@ -31,94 +32,100 @@ class AsconCipher(AbstractCipher):
         return ['s0', 's1', 's2', 's3', 's4',
                 'b0', 'b1', 'b2', 'b3', 'b4', "w"]
 
-    def createSTP(self, stp_filename, parameters):
+    def write_header(self, stp_file, parameters):
         """
-        Creates an STP file for Ascon.
+        Custom header for Ascon.
+        """
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        capacity = parameters.get("capacity", 0)
+        rate = (wordsize * 5) - capacity
+        if "rate" in parameters:
+            rate = parameters["rate"]
+
+        header = ("% Input File for STP\n% Ascon w={} rate={} "
+                  "capacity={} round={}\n\n\n".format(wordsize, rate, capacity,
+                                                      rounds))
+        stp_file.write(header)
+
+    def setup_variables(self, stp_file, parameters):
+        """
+        Declare variables for Ascon.
+        """
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        sboxsize = 5
+
+        # 5 x wordsize state
+        self.s = ["s{}{}".format(x, i) for i in range(rounds+1)
+                 for x in range(sboxsize)]
+        # Output after S-box Linear part 1
+        self.a = ["a{}{}".format(x, i) for i in range(rounds+1)
+                 for x in range(sboxsize)]
+        # Output after S-box Non-Linear part
+        self.b = ["b{}{}".format(x, i) for i in range(rounds+1)
+                 for x in range(sboxsize)]
+        # Output after S-box Linear part 2
+        self.c = ["c{}{}".format(x, i) for i in range(rounds+1)
+                 for x in range(sboxsize)]
+
+        # Inputs/Output to the S-box
+        self.xin = ["inx{}{}{}".format(y, z, i) for i in range(rounds)
+                   for y in range(sboxsize) for z in range (wordsize)]
+        self.xout = ["outx{}{}{}".format(y, z, i) for i in range(rounds)
+                    for y in range(sboxsize) for z in range (wordsize)]
+        self.andout = ["andout{}{}{}".format(y, z, i) for i in range(rounds)
+                      for y in range(sboxsize) for z in range (wordsize)]
+
+        # w = weight
+        self.w = ["w{}".format(i) for i in range(rounds)]
+        self.tmp = ["tmp{}{}{}".format(y, z, i) for i in range(rounds)
+                   for y in range(sboxsize) for z in range (wordsize)]
+
+        stpcommands.setupVariables(stp_file, self.s, wordsize)
+        stpcommands.setupVariables(stp_file, self.a, wordsize)
+        stpcommands.setupVariables(stp_file, self.b, wordsize)
+        stpcommands.setupVariables(stp_file, self.c, wordsize)
+        stpcommands.setupVariables(stp_file, self.w, 16)
+        stpcommands.setupVariables(stp_file, self.tmp, sboxsize)
+        stpcommands.setupVariables(stp_file, self.xin, sboxsize)
+        stpcommands.setupVariables(stp_file, self.xout, sboxsize)
+        stpcommands.setupVariables(stp_file, self.andout, sboxsize)
+        
+        # Register state for non-zero constraint
+        self.state_variables = self.s
+
+    def apply_constraints(self, stp_file, parameters):
+        """
+        Apply Ascon specific constraints.
         """
         wordsize = parameters["wordsize"]
         rounds = parameters["rounds"]
         weight = parameters["sweight"]
-
-        sboxsize = 5 # TODO: support arbitrary sizes
-        capacity = 0
-        rate = (wordsize * sboxsize) - capacity
-
+        
+        capacity = parameters.get("capacity", 0)
+        rate = (wordsize * 5) - capacity
         if "rate" in parameters:
             rate = parameters["rate"]
 
-        if "capacity" in parameters:
-            capacity = parameters["capacity"]
+        # Weight computation (Ascon uses setupWeightComputationSum)
+        stpcommands.setupWeightComputationSum(stp_file, weight, self.w, wordsize)
 
-        assert (rate + capacity) == wordsize * sboxsize
+        # Fix variables for capacity
+        for i in range(rate // wordsize, (rate + capacity) // wordsize):
+            stpcommands.assertVariableValue(stp_file, self.s[i],
+                                            "0hex{}".format("0"*(wordsize // 4)))
 
-        with open(stp_filename, 'w') as stp_file:
-            stp_file.write("% Input File for STP\n% Ascon w={} rate={} "
-                           "capacity={} round={}\n\n\n".format(wordsize,
-                                                               rate, capacity,
-                                                               rounds))
+        # Standard round loop from AbstractCipher template
+        super().apply_constraints(stp_file, parameters)
 
-            # Setup variables
-            # 5 x wordsize state
-            s = ["s{}{}".format(x, i) for i in range(rounds+1)
-                 for x in range(sboxsize)]
-
-            # Output after S-box Linear part 1
-            a = ["a{}{}".format(x, i) for i in range(rounds+1)
-                 for x in range(sboxsize)]
-            # Output after S-box Non-Linear part
-            b = ["b{}{}".format(x, i) for i in range(rounds+1)
-                 for x in range(sboxsize)]
-            # Output after S-box Linear part 2
-            c = ["c{}{}".format(x, i) for i in range(rounds+1)
-                 for x in range(sboxsize)]
-
-
-            # Inputs/Output to the S-box
-            xin = ["inx{}{}{}".format(y, z, i) for i in range(rounds)
-                   for y in range(sboxsize) for z in range (wordsize)]
-            xout = ["outx{}{}{}".format(y, z, i) for i in range(rounds)
-                    for y in range(sboxsize) for z in range (wordsize)]
-            andout = ["andout{}{}{}".format(y, z, i) for i in range(rounds)
-                      for y in range(sboxsize) for z in range (wordsize)]
-
-	        # w = weight
-            w = ["w{}".format(i) for i in range(rounds)]
-            tmp = ["tmp{}{}{}".format(y, z, i) for i in range(rounds)
-                   for y in range(sboxsize) for z in range (wordsize)]
-
-            stpcommands.setupVariables(stp_file, s, wordsize)
-            stpcommands.setupVariables(stp_file, a, wordsize)
-            stpcommands.setupVariables(stp_file, b, wordsize)
-            stpcommands.setupVariables(stp_file, c, wordsize)
-            stpcommands.setupVariables(stp_file, w, 16)
-            stpcommands.setupVariables(stp_file, tmp, sboxsize)
-            stpcommands.setupWeightComputationSum(stp_file, weight, w, wordsize)
-            stpcommands.setupVariables(stp_file, xin, sboxsize)
-            stpcommands.setupVariables(stp_file, xout, sboxsize)
-            stpcommands.setupVariables(stp_file, andout, sboxsize)
-
-            # No all zero characteristic
-            stpcommands.assertNonZero(stp_file, s, wordsize)
-
-            # Fix variables for capacity, only works if rate/capacity is
-            # multiple of wordsize.
-            for i in range(rate // wordsize, (rate + capacity) // wordsize):
-                stpcommands.assertVariableValue(stp_file, s[i],
-                                                "0hex{}".format("0"*(wordsize // 4)))
-
-            for rnd in range(rounds):
-                self.setupAsconRound(stp_file, rnd, s, a, b, c, wordsize, tmp,
-                                     w, xin, xout, andout)
-
-            for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
-
-            for char in parameters["blockedCharacteristics"]:
-                stpcommands.blockCharacteristic(stp_file, char, wordsize)
-
-            stpcommands.setupQuery(stp_file)
-
-        return
+    def apply_round_constraints(self, stp_file, round_nr, parameters):
+        """
+        Ascon round logic.
+        """
+        wordsize = parameters["wordsize"]
+        self.setupAsconRound(stp_file, round_nr, self.s, self.a, self.b, self.c, wordsize, self.tmp,
+                             self.w, self.xin, self.xout, self.andout)
 
     def setupAsconRound(self, stp_file, rnd, s, a, b, c, wordsize, tmp,
                         w, xin, xout, andout):
@@ -188,14 +195,14 @@ class AsconCipher(AbstractCipher):
             #Weight computation
             command += ("ASSERT({0} = (IF {1} = 0b{4} THEN BVSUB({5},0b{4},0b{6}1)"
                         "ELSE BVXOR({2}, {3}) ENDIF));\n".format(
-                            tmp[z + 5*wordsize*rnd], 
+                            self.tmp[z + 5*wordsize*rnd], 
                             xin[z + 5*wordsize*rnd], 
                             varibits, doublebits, "1"*5,
                             5, "0"*4))
 
             weight_sum += ("0b{0}@(BVPLUS({1}, {2}[0:0], {2}[1:1], "
                 "{2}[2:2],{2}[3:3], {2}[4:4])),".format("0"*11, 5, "0b0000@" +
-                                                        tmp[z + 5*wordsize*rnd]))
+                                                        self.tmp[z + 5*wordsize*rnd]))
 
         command += "ASSERT({}=BVPLUS({},{}));\n".format(w[rnd], 16, 
                                                         weight_sum[:-1])

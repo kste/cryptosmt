@@ -8,6 +8,7 @@ Revised by Hosein Hadipour on Jan 6, 2020
 
 from parser import stpcommands
 from ciphers.cipher import AbstractCipher
+from ciphers import components
 
 
 class SkinnyCipher(AbstractCipher):
@@ -23,25 +24,6 @@ class SkinnyCipher(AbstractCipher):
     # Sbox lookup table
     skinny_sbox = [0xc, 0x6, 0x9, 0x0, 0x1, 0xa, 0x2, 0xb, 
                     0x3, 0x8, 0x5, 0xd, 0x4, 0xe, 0x7, 0xf]
-    # reduced product of sum (pos) representation of DDT
-    skinny_sbox_rpos = "(~a1 | a0 | ~b3 | ~b2 | b1 | b0) & (~a1 | a0 | ~b3 | ~b2 | ~b1 | ~b0) & (~a2 | ~a1 | ~a0 | ~b2 | b1 | ~b0) & (~a2 | ~a1 | ~a0 | ~b2 | ~b1 | b0) & (p1 | ~p0) & (~b0 | p0) & (a1 | b2 | ~p2) & (~b2 | p0) & (~a2 | ~b2 | p2) & (~a1 | b3 | b2 | b0) & (a2 | b3 | ~p2) & (a3 | a2 | a0 | ~b3) & (~a0 | p0) & (~a1 | ~b3 | p2) & (~a3 | ~b3 | ~b1 | p2) & (~a2 | p0) & (a3 | a2 | a1 | ~b2) & (a2 | a1 | b3 | ~b1) & (a1 | b3 | b2 | b1 | ~p1) & (~a2 | b3 | ~b0 | p2) & (~a3 | a0 | b2 | ~b0 | p2) & (~a1 | b1 | b0 | p2) & (~a3 | a2 | ~b3 | p2) & (~a3 | p0) & (~a1 | ~a0 | ~b2 | p2) & (b3 | ~b2 | b1 | ~b0 | ~p2) & (~a3 | ~a2 | a1 | b1 | ~p2) & (a3 | a0 | ~b3 | b0 | p2) & (a3 | ~a1 | a0 | ~b3 | b2 | ~b0) & (~a3 | ~a0 | ~b3 | b2 | ~b0 | ~p2) & (a2 | ~a1 | a0 | ~b2 | ~p2) & (a3 | a1 | ~b3 | ~b1 | ~p2) & (~a3 | ~a2 | a0 | b2 | b0 | ~p2) & (a3 | ~a2 | ~a0 | b2 | b0 | ~p2) & (~a2 | ~a0 | b1 | b0 | p2) & (a3 | ~a2 | ~a0 | ~b0 | p2) & (~a3 | a2 | ~a0 | b2 | ~p2) & (a3 | ~a0 | b3 | ~b0 | p2) & (~a1 | b3 | ~b1 | b0 | ~p2) & (a1 | b3 | b1 | ~p2) & (~b2 | ~b1 | ~b0 | p2) & (a0 | ~b3 | b1 | ~b0 | p2)"
-
-    def constraints_by_skinny_sbox(self, variables):
-        """
-        Generate constraints related to sbox
-        """
-        di = variables[0:4]
-        do = variables[4:8]
-        w = variables[9:12]
-        command = self.skinny_sbox_rpos
-        for i in range(4):
-            command = command.replace("a%d" % (3 - i), di[i])
-            command = command.replace("b%d" % (3 - i), do[i])          
-            if i <= 2:
-               command = command.replace("p%d" % (2 - i), w[i])
-        command = "ASSERT(%s = 0bin1);\n" % command
-        command += "ASSERT(%s = 0bin0);\n" % variables[8]
-        return command
 
     def getFormatString(self):
         """
@@ -72,12 +54,47 @@ class SkinnyCipher(AbstractCipher):
 
     def apply_round_constraints(self, stp_file, round_nr, parameters):
         """
-        Apply Skinny round constraints.
+        Apply Skinny round constraints using components.
         """
         blocksize = parameters["blocksize"]
-        self.setupSkinnyRound(stp_file, self.sc[round_nr], self.sr[round_nr], 
-                              self.mc[round_nr], self.sc[round_nr+1], 
-                              self.w[round_nr], blocksize)
+        sc_in = self.sc[round_nr]
+        sr = self.sr[round_nr]
+        mc = self.mc[round_nr]
+        sc_out = self.sc[round_nr+1]
+        w = self.w[round_nr]
+
+        # SubBytes                
+        for i in range(16):
+            inputs = [f"{sc_in}[{4*i + 3}:{4*i + 3}]",
+                      f"{sc_in}[{4*i + 2}:{4*i + 2}]",
+                      f"{sc_in}[{4*i + 1}:{4*i + 1}]",
+                      f"{sc_in}[{4*i + 0}:{4*i + 0}]"]
+            outputs = [f"{sr}[{4*i + 3}:{4*i + 3}]",
+                       f"{sr}[{4*i + 2}:{4*i + 2}]",
+                       f"{sr}[{4*i + 1}:{4*i + 1}]",
+                       f"{sr}[{4*i + 0}:{4*i + 0}]"]
+            weights = [f"{w}[{4*i + 3}:{4*i + 3}]",
+                       f"{w}[{4*i + 2}:{4*i + 2}]",
+                       f"{w}[{4*i + 1}:{4*i + 1}]",
+                       f"{w}[{4*i + 0}:{4*i + 0}]"]
+            components.add_4bit_sbox(stp_file, self.skinny_sbox, inputs, outputs, weights)
+
+        # ShiftRows
+        # Note: We can implement bit-permutation or keep it as manual assertions if complex
+        # Skinny ShiftRows is bit-range based, so we'll use assignments.
+        components.add_assignment(stp_file, f"{mc}[15:0]", f"{sr}[15:0]")
+        components.add_assignment(stp_file, f"{mc}[31:20]", f"{sr}[27:16]")
+        components.add_assignment(stp_file, f"{mc}[19:16]", f"{sr}[31:28]")
+        components.add_assignment(stp_file, f"{mc}[39:32]", f"{sr}[47:40]")
+        components.add_assignment(stp_file, f"{mc}[47:40]", f"{sr}[39:32]")
+        components.add_assignment(stp_file, f"{mc}[63:60]", f"{sr}[51:48]")
+        components.add_assignment(stp_file, f"{mc}[59:48]", f"{sr}[63:52]")
+
+        # MixColumns
+        components.add_assignment(stp_file, f"{sc_out}[31:16]", f"{mc}[15:0]")
+        components.add_xor(stp_file, f"{sc_out}[47:32]", [f"{mc}[31:16]", f"{mc}[47:32]"])
+        components.add_xor(stp_file, f"{sc_out}[63:48]", [f"{mc}[47:32]", f"{mc}[15:0]"])
+        components.add_xor(stp_file, f"{sc_out}[15:0]", [f"{mc}[63:48]", f"{sc_out}[63:48]"])
 
     def apply_iterative_constraints(self, stp_file, parameters):
         """
@@ -85,55 +102,3 @@ class SkinnyCipher(AbstractCipher):
         """
         rounds = parameters["rounds"]
         stpcommands.assertVariableValue(stp_file, self.sc[0], self.sc[rounds])
-
-    def setupSkinnyRound(self, stp_file, sc_in, sr, mc, sc_out, w, blocksize):
-        """
-        Model for differential behaviour of one round Skinny
-        """
-        command = ""
-        # SubBytes                
-        for i in range(16):
-            variables = ["{0}[{1}:{1}]".format(sc_in, 4*i + 3),
-                         "{0}[{1}:{1}]".format(sc_in, 4*i + 2),
-                         "{0}[{1}:{1}]".format(sc_in, 4*i + 1),
-                         "{0}[{1}:{1}]".format(sc_in, 4*i + 0),
-                         "{0}[{1}:{1}]".format(sr, 4*i + 3),
-                         "{0}[{1}:{1}]".format(sr, 4*i + 2),
-                         "{0}[{1}:{1}]".format(sr, 4*i + 1),
-                         "{0}[{1}:{1}]".format(sr, 4*i + 0),
-                         "{0}[{1}:{1}]".format(w, 4*i + 3),
-                         "{0}[{1}:{1}]".format(w, 4*i + 2),
-                         "{0}[{1}:{1}]".format(w, 4*i + 1),
-                         "{0}[{1}:{1}]".format(w, 4*i + 0)]
-            command += self.constraints_by_skinny_sbox(variables)
-
-        # ShiftRows
-        command += "ASSERT({1}[15:0] = {0}[15:0]);\n".format(sr, mc)
-
-        command += "ASSERT({1}[31:20] = {0}[27:16]);\n".format(sr, mc)
-        command += "ASSERT({1}[19:16] = {0}[31:28]);\n".format(sr, mc)
-
-        command += "ASSERT({1}[39:32] = {0}[47:40]);\n".format(sr, mc)
-        command += "ASSERT({1}[47:40] = {0}[39:32]);\n".format(sr, mc)
-
-        command += "ASSERT({1}[63:60] = {0}[51:48]);\n".format(sr, mc)
-        command += "ASSERT({1}[59:48] = {0}[63:52]);\n".format(sr, mc)
-
-        # MixColumns
-        command += "ASSERT("
-        command += "{0}[15:0] = {1}[31:16]".format(mc, sc_out)
-        command += ");\n"
-
-        command += "ASSERT("
-        command += "BVXOR({0}[31:16], {0}[47:32]) = {1}[47:32]".format(mc, sc_out)
-        command += ");\n"
-
-        command += "ASSERT("
-        command += "BVXOR({0}[47:32], {0}[15:0]) = {1}[63:48]".format(mc, sc_out)
-        command += ");\n"
-
-        command += "ASSERT("
-        command += "BVXOR({0}[63:48], {1}[63:48]) = {1}[15:0]".format(mc, sc_out)
-        command += ");\n"
-        stp_file.write(command)
-        return

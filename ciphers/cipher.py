@@ -38,12 +38,20 @@ class AbstractCipher(object, metaclass=ABCMeta):
         self.state_variables = []
         self.weight_variables = []
         
+        self.validate_parameters(parameters)
+        
         with open(filename, 'w') as stp_file:
             self.write_header(stp_file, parameters)
             self.setup_variables(stp_file, parameters)
             self.apply_constraints(stp_file, parameters)
             self.apply_common_constraints(stp_file, parameters)
             self.setup_query(stp_file, parameters)
+
+    def validate_parameters(self, parameters):
+        """
+        Subclasses can override this to validate or modify parameters.
+        """
+        pass
 
     def write_header(self, stp_file, parameters):
         """
