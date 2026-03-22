@@ -26,6 +26,8 @@ class ToolParameters:
     mode: int = 0
     wordsize: int = 16
     blocksize: int = 64
+    tweaksize: Optional[int] = None
+    keysize: Optional[int] = None
     sweight: int = 0
     endweight: int = 1000
     iterative: bool = False
@@ -61,16 +63,17 @@ def startsearch(params: ToolParameters):
         logger.error(f"Cipher {params.cipher} not supported!")
         return
 
-    # For compatibility with existing search module which expects a dict
+    # Structured dictionary for cipher/search modules
     params_dict = asdict(params)
     
-    # Remove keys that are not expected by the search/cipher modules
+    # Optional fields removal logic
     if params.rotationconstants is None:
         del params_dict["rotationconstants"]
     
-    # These are only for the main tool
+    # Remove CLI-only fields
     del params_dict["verbose"]
     del params_dict["quiet"]
+    del params_dict["list_ciphers"]
 
     # Handle program flow
     if params.mode == 0:
@@ -145,6 +148,12 @@ def loadparameters(args) -> ToolParameters:
     if args.blocksize is not None:
         params.blocksize = args.blocksize[0]        
 
+    if args.tweaksize is not None:
+        params.tweaksize = args.tweaksize[0]
+
+    if args.keysize is not None:
+        params.keysize = args.keysize[0]
+
     if args.sweight is not None:
         params.sweight = args.sweight[0]
 
@@ -208,6 +217,10 @@ def main():
                         help="Wordsize used for the cipher.")
     parser.add_argument('--blocksize', nargs=1, type=int,
                         help="Blocksize used for the cipher.")    
+    parser.add_argument('--tweaksize', nargs=1, type=int,
+                        help="Tweaksize used for the cipher (e.g. for Skinny).")
+    parser.add_argument('--keysize', nargs=1, type=int,
+                        help="Keysize used for the cipher.")
     parser.add_argument('--nummessages', nargs=1, type=int,
                         help="Number of message blocks.")
     parser.add_argument('--mode', nargs=1, type=int, 
