@@ -28,6 +28,15 @@ def get_available_solvers():
     ("speck", 2, 16, 1, []),
     ("skinny", 1, 16, 2, ["--blocksize", "64"]),
     ("present", 2, 64, 4, []),
+    # Refactored ciphers
+    ("cham", 1, 16, 0, []), 
+    ("cham", 2, 16, 0, []),
+    ("cham", 1, 32, 0, []),
+    ("cham", 2, 32, 0, []),
+    ("lblock", 1, 32, 0, []), 
+    ("lblock", 2, 32, 2, []),
+    ("twine", 1, 64, 0, []),
+    ("twine", 2, 64, 2, []),
 ])
 def test_cipher_find_min_weight(run_cryptosmt, cipher, rounds, wordsize, expected_weight, extra_args):
     """

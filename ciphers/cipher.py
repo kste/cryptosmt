@@ -34,6 +34,7 @@ class AbstractCipher(object, metaclass=ABCMeta):
     def createSTP(self, filename, parameters):
         """
         Template method to create an STP file.
+        This is only used by refactored ciphers that don't override createSTP.
         """
         self.state_variables = []
         self.weight_variables = []
@@ -142,7 +143,7 @@ class AbstractCipher(object, metaclass=ABCMeta):
             self.state_variables.extend(vars)
         return vars
 
-    def declare_variable_vector_per_round(self, stp_file, prefix, rounds, wordsize, is_weight=False):
+    def declare_variable_vector_per_round(self, stp_file, prefix, rounds, wordsize, is_weight=False, is_state=False):
         """
         Helper to declare a vector of variables with one per round.
         """
@@ -150,4 +151,6 @@ class AbstractCipher(object, metaclass=ABCMeta):
         stpcommands.setupVariables(stp_file, vars, wordsize)
         if is_weight:
             self.weight_variables.extend(vars)
+        if is_state:
+            self.state_variables.extend(vars)
         return vars
