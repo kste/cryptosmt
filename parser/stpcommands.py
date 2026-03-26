@@ -10,31 +10,27 @@ from typing import List, Dict, TextIO, Any
 
 def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> None:
     """
-    Excludes this characteristic from being found.
+    Adds an constraint to the stp stpfile that blocks the given characteristic.
     """
-    # Only add state words (x, y, s)
-    # TODO: extend for other ciphers
-    filtered_words = {var_name: var_value for var_name, var_value in
-                      characteristic.characteristic_data.items()
-                      if var_name.startswith('x') or
-                      var_name.startswith('y') or
-                      var_name.startswith('s') or
-                      var_name.startswith('v')}
+    # Bitwise XOR of all variables in the characteristic
+    # If the XOR is zero, the characteristic is the same
+    # We want to block this, so we assert that the XOR is not zero
+    char_vars = []
+    for var, value in characteristic.characteristic_data.items():
+        if var.startswith('w'): continue
+        if value == "none": continue
+        char_vars.append(f"BVXOR({var}, {value})")
 
-    blockingStatement = "ASSERT(NOT("
-
-    for key, value in filtered_words.items():
-        blockingStatement += f"BVXOR({key}, {value}) | "
-
-    blockingStatement = blockingStatement[:-2]
-    blockingStatement += f") = 0x{'0'*(wordsize // 4)});"
-    stpfile.write(blockingStatement)
+    if char_vars:
+        stpfile.write("ASSERT(NOT((")
+        stpfile.write(" | ".join(char_vars))
+        stpfile.write(f") = 0bin{'0' * wordsize}));\n")
     return
 
 
 def setupQuery(stpfile: TextIO) -> None:
     """
-    Adds the query and printing of counterexample to the stp stpfile.
+    Adds the query and counterexample commands to the stp stpfile.
     """
     stpfile.write("QUERY(FALSE);\n")
     stpfile.write("COUNTEREXAMPLE;\n")
@@ -45,6 +41,7 @@ def setupVariables(stpfile: TextIO, variables: List[str], wordsize: int) -> None
     """
     Adds a list of variables to the stp stpfile.
     """
+    if not variables: return
     stpfile.write(getStringForVariables(variables, wordsize) + '\n')
     return
 
@@ -85,39 +82,67 @@ def getStringForNonZero(variables: List[str], wordsize: int) -> str:
     return command
 
 
-def limitWeight(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
-    """
-    Adds the weight computation and assertion to the stp stpfile.
-    """
-    stpfile.write("limitWeight: BITVECTOR(16);\n")
-    stpfile.write(getWeightString(p, wordsize, ignoreMSBs, "limitWeight") + "\n")
-    binary_weight = bin(weight)[2:].zfill(16)
-    stpfile.write(f"ASSERT(BVLE(limitWeight, 0bin{binary_weight}));\n")
-    return
-
-def setupWeightComputationSum(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
-    """
-    Assert that weight is equal to the sum of p.
-    """
-    stpfile.write("weight: BITVECTOR(16);\n")
-    round_sum = ",".join(p)
-    if len(p) > 1:
-        stpfile.write(f"ASSERT(weight = BVPLUS(16,{round_sum}));\n")
-    else:
-        stpfile.write(f"ASSERT(weight = {round_sum});\n")
-
-    binary_weight = bin(weight)[2:].zfill(16)
-    stpfile.write(f"ASSERT(weight = 0bin{binary_weight});\n")
-    return
-
-def setupWeightComputation(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0) -> None:
+def setupWeightComputation(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0, encoding: str = "bvplus") -> None:
     """
     Assert that weight is equal to the sum of the hamming weight of p.
     """
     stpfile.write("weight: BITVECTOR(16);\n")
-    stpfile.write(getWeightString(p, wordsize, ignoreMSBs) + "\n")
     binary_weight = bin(weight)[2:].zfill(16)
     stpfile.write(f"ASSERT(weight = 0bin{binary_weight});\n")
+
+    if encoding in ["sorter", "totalizer"]:
+        from . import encodings
+        bits = []
+        for var in p:
+            for bit in range(wordsize - ignoreMSBs):
+                bits.append(f"{var}[{bit}:{bit}]")
+        encodings.add_weight_constraint(stpfile, bits, weight, "w_enc", encoding, equal=True)
+    else:
+        stpfile.write(getWeightString(p, wordsize, ignoreMSBs) + "\n")
+    return
+
+
+def limitWeight(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0, encoding: str = "bvplus") -> None:
+    """
+    Adds the weight computation and assertion to the stp stpfile.
+    """
+    stpfile.write("limitWeight: BITVECTOR(16);\n")
+    binary_weight = bin(weight)[2:].zfill(16)
+    
+    if encoding in ["sorter", "totalizer"]:
+        from . import encodings
+        bits = []
+        for var in p:
+            for bit in range(wordsize - ignoreMSBs):
+                bits.append(f"{var}[{bit}:{bit}]")
+        encodings.add_weight_constraint(stpfile, bits, weight, "w_limit", encoding, equal=False)
+    else:
+        stpfile.write(getWeightString(p, wordsize, ignoreMSBs, "limitWeight") + "\n")
+        stpfile.write(f"ASSERT(BVLE(limitWeight, 0bin{binary_weight}));\n")
+    return
+
+def setupWeightComputationSum(stpfile: TextIO, weight: int, p: List[str], wordsize: int, ignoreMSBs: int = 0, encoding: str = "bvplus") -> None:
+    """
+    Assert that weight is equal to the sum of p.
+    """
+    stpfile.write("weight: BITVECTOR(16);\n")
+    binary_weight = bin(weight)[2:].zfill(16)
+    stpfile.write(f"ASSERT(weight = 0bin{binary_weight});\n")
+
+    if encoding in ["sorter", "totalizer"]:
+        from . import encodings
+        # p contains words that should be summed bitwise
+        bits = []
+        for var in p:
+            for bit in range(wordsize - ignoreMSBs):
+                bits.append(f"{var}[{bit}:{bit}]")
+        encodings.add_weight_constraint(stpfile, bits, weight, "w_sum_enc", encoding, equal=True)
+    else:
+        round_sum = ",".join(p)
+        if len(p) > 1:
+            stpfile.write(f"ASSERT(weight = BVPLUS(16,{round_sum}));\n")
+        else:
+            stpfile.write(f"ASSERT(weight = {round_sum});\n")
     return
 
 

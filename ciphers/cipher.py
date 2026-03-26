@@ -80,11 +80,12 @@ class AbstractCipher(object, metaclass=ABCMeta):
         # Setup weight computation if weight variables were registered
         if self.weight_variables:
             ignore_msbs = parameters.get("ignore_msbs", 0)
+            encoding = parameters.get("weightencoding", "bvplus")
             # Use blocksize for weight if specified (Skinny/Rectangle)
             w_size = wordsize
             if self.name in ["skinny", "rectangle"]:
                 w_size = parameters.get("blocksize", 64)
-            stpcommands.setupWeightComputation(stp_file, weight, self.weight_variables, w_size, ignore_msbs)
+            stpcommands.setupWeightComputation(stp_file, weight, self.weight_variables, w_size, ignore_msbs, encoding)
 
         # Standard round loop
         for i in range(rounds):

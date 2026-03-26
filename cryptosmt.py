@@ -34,6 +34,7 @@ class ToolParameters:
     boolector: bool = False
     bitwuzla: bool = False
     stp: bool = False
+    weightencoding: str = "bvplus"
     dot: Optional[str] = None
     latex: Optional[str] = None
     nummessages: int = 1
@@ -179,6 +180,9 @@ def loadparameters(args) -> ToolParameters:
     if args.stp:
         params.stp = args.stp
 
+    if args.weightencoding:
+        params.weightencoding = args.weightencoding
+
     if args.nummessages is not None:
         params.nummessages = args.nummessages[0]
 
@@ -245,6 +249,8 @@ def main():
                         help="Use bitwuzla to find solutions")
     parser.add_argument('--stp', action="store_true",
                         help="Use STP to find solutions (default)")
+    parser.add_argument('--weightencoding', choices=['bvplus', 'sorter', 'totalizer'], 
+                        default='bvplus', help="Encoding used for weight computation.")
     parser.add_argument('--inputfile', nargs=1, help="Use an yaml input file to"
                                                      "read the parameters.")
     parser.add_argument('--dot', nargs=1, help="Print the trail in .dot format.")
