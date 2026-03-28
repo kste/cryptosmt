@@ -258,6 +258,161 @@ def add_noekeon_theta(stp_file: TextIO, v: List[str], v_out: List[str], wordsize
     stp_file.write(f"ASSERT({v_out[2]} = BVXOR({v[2]}, {l}));\n")
     stp_file.write(f"ASSERT({v_out[3]} = BVXOR({v[3]}, {r}));\n")
 
+def add_chacha_quarter_round(stp_file: TextIO, a: List[str], c: List[str], w: List[str], wordsize: int):
+    """
+    ChaCha Quarter Round logic.
+    a: input state [a0, a1, a2, a3]
+    c: output state [c0, c1, c2, c3]
+    w: weight variables [w0, w1, w2, w3]
+    """
+    from parser.stpcommands import getStringLeftRotate as rotl
+    
+    # We need intermediate variables for the ARX steps
+    import random
+    rnd = f"{random.randrange(16**8):08x}"
+    t = [f"chacha_tmp_{i}_{rnd}" for i in range(4)]
+    stpcommands.setupVariables(stp_file, t, wordsize)
+
+    # a += b; d ^= a; d <<<= 16;
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(a[0], a[1], t[0], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[0]} = ~{stpcommands.getStringEq(a[0], a[1], t[0])});\n")
+    d1 = rotl(f"BVXOR({t[0]}, {a[3]})", 16, wordsize)
+
+    # c += d; b ^= c; b <<<= 12;
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(a[2], d1, t[1], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[1]} = ~{stpcommands.getStringEq(a[2], d1, t[1])});\n")
+    b1 = rotl(f"BVXOR({a[1]}, {t[1]})", 12, wordsize)
+
+    # a += b; d ^= a; d <<<= 8;
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(t[0], b1, t[2], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[2]} = ~{stpcommands.getStringEq(t[0], b1, t[2])});\n")
+    d2 = rotl(f"BVXOR({t[2]}, {d1})", 8, wordsize)
+
+    # c += d; b ^= c; b <<<= 7;
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(t[1], d2, t[3], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[3]} = ~{stpcommands.getStringEq(t[1], d2, t[3])});\n")
+    b2 = rotl(f"BVXOR({b1}, {t[3]})", 7, wordsize)
+
+    # Output
+    stp_file.write(f"ASSERT({c[0]} = {t[2]});\n")
+    stp_file.write(f"ASSERT({c[1]} = {b2});\n")
+    stp_file.write(f"ASSERT({c[2]} = {t[3]});\n")
+    stp_file.write(f"ASSERT({c[3]} = {d2});\n")
+
+def add_salsa_quarter_round(stp_file: TextIO, a: List[str], c: List[str], w: List[str], wordsize: int):
+    """
+    Salsa Quarter Round logic.
+    """
+    from parser.stpcommands import getStringLeftRotate as rotl
+    import random
+    rnd = f"{random.randrange(16**8):08x}"
+    t = [f"salsa_tmp_{i}_{rnd}" for i in range(4)]
+    stpcommands.setupVariables(stp_file, t, wordsize)
+
+    # b ^= (a+d) <<< 7
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(a[0], a[3], t[0], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[0]} = ~{stpcommands.getStringEq(a[0], a[3], t[0])});\n")
+    b1 = f"BVXOR({rotl(t[0], 7, wordsize)}, {a[1]})"
+
+    # c ^= (b+a) <<< 9
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(a[0], b1, t[1], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[1]} = ~{stpcommands.getStringEq(a[0], b1, t[1])});\n")
+    c1 = f"BVXOR({rotl(t[1], 9, wordsize)}, {a[2]})"
+
+    # d ^= (c+b) <<< 13
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(b1, c1, t[2], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[2]} = ~{stpcommands.getStringEq(b1, c1, t[2])});\n")
+    d1 = f"BVXOR({rotl(t[2], 13, wordsize)}, {a[3]})"
+
+    # a ^= (d+c) <<< 18
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(c1, d1, t[3], wordsize)});\n")
+    stp_file.write(f"ASSERT({w[3]} = ~{stpcommands.getStringEq(c1, d1, t[3])});\n")
+    a1 = f"BVXOR({a[0]}, {rotl(t[3], 18, wordsize)})"
+
+    # Output
+    stp_file.write(f"ASSERT({c[0]} = {a1});\n")
+    stp_file.write(f"ASSERT({c[1]} = {b1});\n")
+    stp_file.write(f"ASSERT({c[2]} = {c1});\n")
+    stp_file.write(f"ASSERT({c[3]} = {d1});\n")
+
+def add_gimli_round(stp_file: TextIO, v_in: List[str], v_out: List[str], w: str, wordsize: int, 
+                    a: int, b: int, c: int, d: int, e: int, f: int):
+    """
+    Gimli SP-box round logic.
+    v_in: [x, y, z]
+    v_out: [x_out, y_out, z_out]
+    """
+    from parser.stpcommands import getStringLeftRotate as rotl
+    import random
+    rnd = f"{random.randrange(16**8):08x}"
+    # State variables for non-linear layer
+    sb = [f"gimli_sb{i}_{rnd}" for i in range(3)]
+    stpcommands.setupVariables(stp_file, sb, wordsize)
+    
+    xin, yin, zin = v_in
+    xsb, ysb, zsb = sb
+    xout, yout, zout = v_out
+
+    # Conditions for non-linear layer
+    xnl = f"({xsb} & ~({yin}|{zin}))"
+    ynl = f"({ysb} & ~({xin}|{zin}))"
+    znl = f"({zsb} & ~({xin}|{yin}))"
+    stp_file.write(f"ASSERT(({xnl} | {ynl} | {znl}) = 0x{'0' * (wordsize // 4)});\n")
+
+    # Dependency between bits
+    xcond = f"(({xin} & {yin} & ~{zin}) & ~(BVXOR({xsb}, {ysb})))"
+    ycond = f"(({xin} & ~{yin} & {zin}) & (BVXOR({xsb}, {zsb})))"
+    zcond = f"((~{xin} & {yin} & {zin}) & ~(BVXOR({ysb}, {zsb})))"
+    fcond = f"(({xin} & {yin} & {zin}) & ~(BVXOR(BVXOR({xsb}, {ysb}), {zsb})))"
+    stp_file.write(f"ASSERT(({xcond} | {ycond} | {zcond} | {fcond}) = 0x{'0' * (wordsize // 4)});\n")
+
+    xshift = f"BVXOR({xin}, BVXOR(({zin} << 1)[{wordsize-1}:0], ({xsb} << {a})[{wordsize-1}:0]))"
+    stp_file.write(f"ASSERT({zout} = {rotl(xshift, d, wordsize)});\n")
+
+    yshift = f"BVXOR({yin}, BVXOR({xin}, ({ysb} << {b})[{wordsize-1}:0]))"
+    stp_file.write(f"ASSERT({yout} = {rotl(yshift, e, wordsize)});\n")
+
+    zshift = f"BVXOR({zin}, BVXOR({yin}, ({zsb} << {c})[{wordsize-1}:0]))"
+    stp_file.write(f"ASSERT({xout} = {rotl(zshift, f, wordsize)});\n")
+
+    # Weight
+    wxtmp = f"((((({yin} | {zin}) << {a})[{wordsize-1}:0]) >> {a})[{wordsize-1}:0])"
+    wytmp = f"((((({xin} | {zin}) << {b})[{wordsize-1}:0]) >> {b})[{wordsize-1}:0])"
+    wztmp = f"((((({xin} | {yin}) << {c})[{wordsize-1}:0]) >> {c})[{wordsize-1}:0])"
+    stp_file.write(f"ASSERT({w} = ({wxtmp} | {wytmp} | {wztmp}));\n")
+
+def add_siphash_round(stp_file: TextIO, v_in: List[str], v_out: List[str], w: List[str], wordsize: int):
+    """
+    SipHash Round logic.
+    """
+    from parser.stpcommands import getStringLeftRotate as rotl
+    from parser.stpcommands import getStringRightRotate as rotr
+    import random
+    rnd = f"{random.randrange(16**8):08x}"
+    # Intermediate values a0..a3
+    a = [f"sip_a{i}_{rnd}" for i in range(4)]
+    stpcommands.setupVariables(stp_file, a, wordsize)
+
+    # a0 = (v1 + v0) <<< 32; a1 = (v1 + v0) ^ (v1 <<< 13)
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(v_in[1], v_in[0], rotr(a[0], 32, wordsize), wordsize)});\n")
+    stp_file.write(f"ASSERT({a[1]} = BVXOR({rotl(v_in[1], 13, wordsize)}, {rotr(a[0], 32, wordsize)}));\n")
+    stp_file.write(f"ASSERT({w[0]} = ~{stpcommands.getStringEq(v_in[1], v_in[0], rotr(a[0], 32, wordsize))});\n")
+
+    # a2 = (v2 + v3); a3 = (v2 + v3) ^ (v3 <<< 16)
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(v_in[2], v_in[3], a[2], wordsize)});\n")
+    stp_file.write(f"ASSERT({a[3]} = BVXOR({rotl(v_in[3], 16, wordsize)}, {a[2]}));\n")
+    stp_file.write(f"ASSERT({w[1]} = ~{stpcommands.getStringEq(v_in[2], v_in[3], a[2])});\n")
+
+    # v0_out = (a0 + a3); v3_out = (a0 + a3) ^ (a3 <<< 21)
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(a[0], a[3], v_out[0], wordsize)});\n")
+    stp_file.write(f"ASSERT({v_out[3]} = BVXOR({rotl(a[3], 21, wordsize)}, {v_out[0]}));\n")
+    stp_file.write(f"ASSERT({w[2]} = ~{stpcommands.getStringEq(a[0], a[3], v_out[0])});\n")
+
+    # v2_out = (a2 + a1) <<< 32; v1_out = (a2 + a1) ^ (a1 <<< 17)
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(a[2], a[1], rotr(v_out[2], 32, wordsize), wordsize)});\n")
+    stp_file.write(f"ASSERT({v_out[1]} = BVXOR({rotl(a[1], 17, wordsize)}, {rotr(v_out[2], 32, wordsize)}));\n")
+    stp_file.write(f"ASSERT({w[3]} = ~{stpcommands.getStringEq(a[2], a[1], rotr(v_out[2], 32, wordsize))});\n")
+
 def add_assignment(stp_file: TextIO, out: str, in_var: str):
     """
     Adds a simple assignment/equality constraint.

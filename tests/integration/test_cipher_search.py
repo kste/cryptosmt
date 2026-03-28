@@ -44,6 +44,11 @@ def get_available_solvers():
     ("chaskeyhalf", 2, 32, 0, 0, ["--nummessages", "1"]),
     ("craft", 1, 64, 2, 1, []),
     ("noekeon", 2, 32, 0, 0, []),
+    # Stream ciphers / hash functions
+    ("chacha", 1, 32, 0, 0, []),
+    ("salsa", 1, 32, 0, 0, []),
+    ("gimli", 2, 32, 0, 0, []),
+    ("siphash", 1, 64, 25, 0, ["--nummessages", "1"]),
 ])
 def test_cipher_find_min_weight(run_cryptosmt, cipher, rounds, wordsize, expected_weight, sweight, extra_args):
     """
