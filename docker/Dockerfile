@@ -30,7 +30,8 @@ RUN apt-get update && apt-get install -y \
     cryptominisat \
     boolector \
     meson \
-    ninja-build
+    ninja-build \
+    unzip
 
 WORKDIR /home/tools/
 
@@ -61,6 +62,12 @@ RUN git clone https://github.com/bitwuzla/bitwuzla && \
     cd build && \
     ninja install
 
+# Download and install ApproxMC binary
+RUN wget https://github.com/meelgroup/approxmc/releases/latest/download/approxmc-linux-amd64.zip && \
+    unzip approxmc-linux-amd64.zip && \
+    chmod +x approxmc && \
+    mv approxmc /usr/local/bin/
+
 RUN ldconfig
 
 # Copy local code
@@ -71,6 +78,7 @@ COPY . .
 RUN sed -i 's|PATH_STP = .*|PATH_STP = "/usr/local/bin/stp"|' config.py && \
     sed -i 's|PATH_CRYPTOMINISAT = .*|PATH_CRYPTOMINISAT = "/usr/bin/cryptominisat5"|' config.py && \
     sed -i 's|PATH_BOOLECTOR = .*|PATH_BOOLECTOR = "/usr/bin/boolector"|' config.py && \
-    sed -i 's|PATH_BITWUZLA = .*|PATH_BITWUZLA = "/usr/local/bin/bitwuzla"|' config.py
+    sed -i 's|PATH_BITWUZLA = .*|PATH_BITWUZLA = "/usr/local/bin/bitwuzla"|' config.py && \
+    sed -i 's|PATH_APPROXMC = .*|PATH_APPROXMC = "/usr/local/bin/approxmc"|' config.py
 
 ENTRYPOINT ["python3", "cryptosmt.py"]

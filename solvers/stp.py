@@ -4,9 +4,10 @@ import logging
 import os
 import random
 import shutil
+import re
 from .solver import AbstractSolver, SolverResult
 from parser import parsesolveroutput
-from config import PATH_CRYPTOMINISAT, MAX_CHARACTERISTICS
+from config import PATH_CRYPTOMINISAT, MAX_CHARACTERISTICS, PATH_APPROXMC
 
 logger = logging.getLogger("cryptosmt")
 
@@ -25,9 +26,9 @@ class STPSolver(AbstractSolver):
     def parse_characteristic(self, result: SolverResult, cipher, rounds):
         return parsesolveroutput.getCharSTPOutput(result.raw_output, cipher, rounds)
 
-    def solve_and_count(self, stp_file: str, sat_logfile: str) -> int:
+    def solve_and_count(self, stp_file: str, sat_logfile: str, approxmc: bool = False) -> int:
         """
-        Specialized method for STP + CryptoMiniSat to count solutions.
+        Specialized method for STP + CryptoMiniSat/ApproxMC to count solutions.
         Uses temporary directories for parallel safety because STP hardcodes output_0.cnf.
         """
         rnd_id = f"{random.randrange(16**8):08x}"
@@ -51,24 +52,45 @@ class STPSolver(AbstractSolver):
                 logger.error(f"CNF file not generated in {tmp_dir}")
                 return 0
 
-            # Find the number of solutions with the SAT solver
-            sat_params = [PATH_CRYPTOMINISAT, "--maxsol", str(MAX_CHARACTERISTICS),
-                          "--verb", "0", "-s", "0", "output_0.cnf"]
+            if approxmc:
+                # Use ApproxMC for approximate model counting
+                sat_params = [PATH_APPROXMC, "output_0.cnf"]
+                logger.debug(f"Starting ApproxMC in {tmp_dir}: {' '.join(sat_params)}")
+                sat_process = subprocess.Popen(sat_params, stderr=subprocess.PIPE,
+                                               stdout=subprocess.PIPE, cwd=tmp_dir)
+                
+                result, err = sat_process.communicate()
+                decoded_result = result.decode("utf-8")
+                
+                with open(abs_sat_logfile, "w") as log_file:
+                    log_file.write(decoded_result)
+                
+                # Parse ApproxMC output for "s mc <count>"
+                match = re.search(r"s mc (\d+)", decoded_result)
+                if match:
+                    return int(match.group(1))
+                else:
+                    logger.warning("ApproxMC did not return a count.")
+                    return 0
+            else:
+                # Find the number of solutions with the SAT solver (CryptoMiniSat)
+                sat_params = [PATH_CRYPTOMINISAT, "--maxsol", str(MAX_CHARACTERISTICS),
+                              "--verb", "0", "-s", "0", "output_0.cnf"]
 
-            logger.debug(f"Starting SAT solver in {tmp_dir}: {' '.join(sat_params)}")
-            sat_process = subprocess.Popen(sat_params, stderr=subprocess.PIPE,
-                                           stdout=subprocess.PIPE, cwd=tmp_dir)
+                logger.debug(f"Starting SAT solver in {tmp_dir}: {' '.join(sat_params)}")
+                sat_process = subprocess.Popen(sat_params, stderr=subprocess.PIPE,
+                                               stdout=subprocess.PIPE, cwd=tmp_dir)
 
-            log_file = open(abs_sat_logfile, "w")
-            solutions = 0
-            while sat_process.poll() is None:
-                line = sat_process.stdout.readline().decode("utf-8")
-                log_file.write(line)
-                if "s SATISFIABLE" in line:
-                    solutions += 1
-            
-            log_file.close()
-            return solutions
+                log_file = open(abs_sat_logfile, "w")
+                solutions = 0
+                while sat_process.poll() is None:
+                    line = sat_process.stdout.readline().decode("utf-8")
+                    log_file.write(line)
+                    if "s SATISFIABLE" in line:
+                        solutions += 1
+                
+                log_file.close()
+                return solutions
             
         finally:
             # Cleanup unique directory

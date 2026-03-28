@@ -91,6 +91,17 @@ CryptoSMT supports multiple SMT solvers for finding characteristics. While STP i
 *   **STP (Default):** The original solver integrated in CryptoSMT.
 *   **Boolector:** Often much faster than STP for bit-vector problems. Use with `--boolector`.
 *   **Bitwuzla:** The successor to Boolector, generally offering the best performance. Use with `--bitwuzla`.
+*   **ApproxMC:** Provides approximate model counting for **Probability Estimation (Mode 4)**. Use with `--approxmc`.
+
+### Exact vs. Approximate Counting
+
+When using **Mode 4**, CryptoSMT needs to count the number of characteristics for each weight.
+
+1.  **Exact Counting (Default):** Uses `CryptoMiniSat` to find every single solution. This is extremely fast when the number of trails is small (e.g., < 100,000), but becomes impossible if there are millions or billions of solutions.
+2.  **Approximate Counting (`--approxmc`):** Uses `ApproxMC` to estimate the number of solutions using hash-based sampling. 
+
+**When to use ApproxMC:**
+ApproxMC has a fixed overhead but scales exceptionally well with the size of the solution space. You should use it when analyzing complex differentials where you expect a very large number of trails (e.g., $2^{20}$ or more), as exact counting would take far too long. For simple problems with few solutions, exact counting remains the faster choice.
 
 ### Benchmarks (SIMON-32/64, 10 rounds)
 
