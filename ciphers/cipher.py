@@ -41,6 +41,11 @@ class AbstractCipher(object, metaclass=ABCMeta):
         
         self.validate_parameters(parameters)
         
+        # Ensure tmp directory exists
+        import os
+        if not os.path.exists("tmp"):
+            os.makedirs("tmp")
+
         with open(filename, 'w') as stp_file:
             self.write_header(stp_file, parameters)
             self.setup_variables(stp_file, parameters)

@@ -21,34 +21,36 @@ def get_available_solvers():
     return available
 
 @pytest.mark.skipif(not solver_available(), reason="Solver not found (not in docker?)")
-@pytest.mark.parametrize("cipher, rounds, wordsize, expected_weight, extra_args", [
-    ("simon", 4, 16, 6, []),
-    ("simon", 3, 16, 4, []),
-    ("speck", 3, 16, 3, []),
-    ("speck", 2, 32, 1, []), # Speck-64
-    ("speck", 2, 16, 1, []),
-    ("skinny", 1, 16, 2, ["--blocksize", "64"]),
-    ("present", 2, 64, 4, []),
+@pytest.mark.parametrize("cipher, rounds, wordsize, expected_weight, sweight, extra_args", [
+    ("simon", 4, 16, 6, 5, []),
+    ("simon", 3, 16, 4, 3, []),
+    ("speck", 3, 16, 3, 2, []),
+    ("speck", 2, 32, 1, 0, []), # Speck-64
+    ("speck", 2, 16, 1, 0, []),
+    ("skinny", 1, 16, 2, 1, ["--blocksize", "64"]),
+    ("present", 2, 64, 4, 3, []),
     # Refactored ciphers
-    ("cham", 1, 16, 0, []), 
-    ("cham", 2, 16, 0, []),
-    ("lblock", 1, 32, 0, []), 
-    ("lblock", 2, 32, 2, []),
-    ("twine", 1, 64, 0, []),
-    ("twine", 2, 64, 2, []),
+    ("cham", 1, 16, 0, 0, []),
+    ("cham", 2, 16, 0, 0, []),
+    ("lblock", 1, 32, 0, 0, []),
+    ("lblock", 2, 32, 2, 1, []),
+    ("twine", 1, 64, 0, 0, []),
+    ("twine", 2, 64, 2, 1, []),
     # Newly refactored
-    ("rectangle", 1, 16, 2, ["--blocksize", "64"]),
-    ("gift", 1, 64, 2, []),
-    ("midori", 1, 64, 2, []),
-    ("sparx", 1, 16, 5, []),
+    ("rectangle", 1, 16, 2, 1, ["--blocksize", "64"]),
+    ("gift", 1, 64, 2, 1, []),
+    ("midori", 1, 64, 2, 1, []),
+    ("sparx", 1, 16, 5, 4, []),
+    ("chaskeyhalf", 2, 32, 0, 0, ["--nummessages", "1"]),
+    ("craft", 1, 64, 2, 1, []),
+    ("noekeon", 2, 32, 0, 0, []),
 ])
-def test_cipher_find_min_weight(run_cryptosmt, cipher, rounds, wordsize, expected_weight, extra_args):
+def test_cipher_find_min_weight(run_cryptosmt, cipher, rounds, wordsize, expected_weight, sweight, extra_args):
     """
     Finds the minimum weight characteristic for a given cipher, rounds, and wordsize.
     Mode 0 (default).
     """
-    args = ["--cipher", cipher, "--rounds", str(rounds), "--wordsize", str(wordsize)] + extra_args
-    
+    args = ["--cipher", cipher, "--rounds", str(rounds), "--wordsize", str(wordsize), "--sweight", str(sweight)] + extra_args    
     # Use bitwuzla if available for speed
     cmd_args = args.copy()
     if "--bitwuzla" not in cmd_args and "--boolector" not in cmd_args:

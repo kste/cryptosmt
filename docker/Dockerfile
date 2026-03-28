@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     python3-yaml \
     python3-pytest \
     python3-pytest-mock \
+    python3-pytest-xdist \
     python3-tqdm \
     python3-rich \
     libboost-all-dev \

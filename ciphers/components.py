@@ -201,6 +201,63 @@ def add_sparx_l_box(stp_file: TextIO, x_in: str, y_in: str, x_out: str, y_out: s
     stp_file.write(f"ASSERT({x_out} = BVXOR({x_in}, {rot_x_y}));\n")
     stp_file.write(f"ASSERT({y_out} = BVXOR({y_in}, {rot_x_y}));\n")
 
+def add_chaskey_round(stp_file: TextIO, v: List[str], v_out: List[str], w: List[str], wordsize: int, rnd: int):
+    """
+    Chaskey round logic (Half rounds).
+    """
+    from parser.stpcommands import getStringRightRotate as rotr
+    from parser.stpcommands import getStringLeftRotate as rotl
+    
+    if (rnd % 2) == 0:
+        rot_one, rot_two = 5, 8
+    else:
+        rot_one, rot_two = 7, 13
+
+    # v0_out = v0 + v1
+    # Original file had some weird mapping, let's stick to what worked there:
+    # v0_out = v2_in + v3_in
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(v[2], v[3], v_out[0], wordsize)});\n")
+    # v1_out = rotl(v1_in, rot_one) ^ rotr(v2_out, 16)
+    stp_file.write(f"ASSERT({v_out[1]} = BVXOR({rotl(v[1], rot_one, wordsize)}, {rotr(v_out[2], 16, wordsize)}));\n")
+    # v2_out = v1_in + v0_in (rotated by 16)
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(v[1], v[0], rotr(v_out[2], 16, wordsize), wordsize)});\n")
+    # v3_out = rotl(v3_in, rot_two) ^ v0_out
+    stp_file.write(f"ASSERT({v_out[3]} = BVXOR({rotl(v[3], rot_two, wordsize)}, {v_out[0]}));\n")
+
+    # Weights
+    stp_file.write(f"ASSERT({w[0]} = ~{stpcommands.getStringEq(v[1], v[0], rotr(v_out[2], 16, wordsize))});\n")
+    stp_file.write(f"ASSERT({w[1]} = ~{stpcommands.getStringEq(v[2], v[3], v_out[0])});\n")
+
+def add_craft_mix_columns(stp_file: TextIO, x: str, y: str):
+    """
+    Craft MixColumns (nibble-based).
+    """
+    for j in range(4):
+        # y[j] = x[j] ^ x[j+8] ^ x[j+12]
+        stp_file.write(f"ASSERT({y}[{4*j+3}:{4*j}] = BVXOR(BVXOR({x}[{4*(8+j)+3}:{4*(8+j)}], {x}[{4*(12+j)+3}:{4*(12+j)}]), {x}[{4*j+3}:{4*j}]));\n")
+        # y[j+4] = x[j+4] ^ x[j+12]
+        stp_file.write(f"ASSERT({y}[{4*(4+j)+3}:{4*(4+j)}] = BVXOR({x}[{4*(4+j)+3}:{4*(4+j)}], {x}[{4*(12+j)+3}:{4*(12+j)}]));\n")
+    # y[8..15] = x[8..15]
+    stp_file.write(f"ASSERT({y}[63:32] = {x}[63:32]);\n")
+
+def add_noekeon_theta(stp_file: TextIO, v: List[str], v_out: List[str], wordsize: int):
+    """
+    Noekeon Theta linear layer.
+    """
+    from parser.stpcommands import getStringRightRotate as rotr
+    from parser.stpcommands import getStringLeftRotate as rotl
+    
+    in1xorin3 = f"BVXOR({v[1]}, {v[3]})"
+    l = f"BVXOR(BVXOR({rotl(in1xorin3, 8, wordsize)}, {in1xorin3}), {rotr(in1xorin3, 8, wordsize)})"
+    
+    in0xorin2 = f"BVXOR({v[0]}, {v[2]})"
+    r = f"BVXOR(BVXOR({rotl(in0xorin2, 8, wordsize)}, {in0xorin2}), {rotr(in0xorin2, 8, wordsize)})"
+    
+    stp_file.write(f"ASSERT({v_out[0]} = BVXOR({v[0]}, {l}));\n")
+    stp_file.write(f"ASSERT({v_out[1]} = BVXOR({v[1]}, {r}));\n")
+    stp_file.write(f"ASSERT({v_out[2]} = BVXOR({v[2]}, {l}));\n")
+    stp_file.write(f"ASSERT({v_out[3]} = BVXOR({v[3]}, {r}));\n")
+
 def add_assignment(stp_file: TextIO, out: str, in_var: str):
     """
     Adds a simple assignment/equality constraint.

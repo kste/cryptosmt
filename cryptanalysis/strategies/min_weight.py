@@ -44,10 +44,14 @@ class MinWeightStrategy(SearchStrategy):
                 
                 local_params = self.parameters.copy()
                 local_params["sweight"] = weight
-                stp_file = f"tmp/{self.cipher.name}{self.parameters['wordsize']}.stp"
+                
+                # Use unique filename to avoid collisions in parallel tests
+                rnd_id = f"{random.randrange(16**8):08x}"
+                stp_file = f"tmp/{self.cipher.name}{self.parameters['wordsize']}_{rnd_id}.stp"
                 self.cipher.createSTP(stp_file, local_params)
                 
                 result = self.solver.solve(stp_file)
+                if os.path.isfile(stp_file): os.remove(stp_file)
                 if result.is_sat:
                     return self._process_result(weight, result)
         else:
