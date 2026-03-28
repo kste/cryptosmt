@@ -88,3 +88,10 @@ class SpeckCipher(AbstractCipher):
         rounds = parameters["rounds"]
         stpcommands.assertVariableValue(stp_file, self.x[0], self.x[rounds])
         stpcommands.assertVariableValue(stp_file, self.y[0], self.y[rounds])
+
+    def get_blocking_constraints(self, stp_file, characteristic, parameters):
+        """
+        Custom blocking for Speck to ignore MSBs.
+        """
+        wordsize = parameters["wordsize"]
+        stpcommands.blockCharacteristic(stp_file, characteristic, wordsize, ignore_msbs=1)

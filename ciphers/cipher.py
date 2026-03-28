@@ -122,7 +122,20 @@ class AbstractCipher(object, metaclass=ABCMeta):
 
         # Blocked characteristics
         for char in parameters.get("blockedCharacteristics", []):
-            stpcommands.blockCharacteristic(stp_file, char, size, ignore_msbs=parameters.get("ignore_msbs", 0))
+            self.get_blocking_constraints(stp_file, char, parameters)
+
+    def get_blocking_constraints(self, stp_file, characteristic, parameters):
+        """
+        Default implementation for blocking a characteristic.
+        Can be overridden by subclasses for specific needs.
+        """
+        from parser import stpcommands
+        size = parameters.get("wordsize", 16)
+        if self.name in ["skinny", "rectangle"]:
+            size = parameters.get("blocksize", 64)
+            
+        stpcommands.blockCharacteristic(stp_file, characteristic, size, 
+                                        ignore_msbs=parameters.get("ignore_msbs", 0))
 
     def apply_iterative_constraints(self, stp_file, parameters):
         """

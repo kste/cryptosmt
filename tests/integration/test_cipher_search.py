@@ -272,20 +272,20 @@ def test_simon_find_all_characteristics(run_cryptosmt):
     assert result.returncode == 0
     assert "Finished weight 2. Total found: 128" in result.stdout
 
-@pytest.mark.skip(reason="Fails due to complex interaction of rotation and ignore_msbs in Mode 2")
 @pytest.mark.skipif(not solver_available(), reason="Solver not found")
-def test_speck_find_all_characteristics(run_cryptosmt):
+def test_speck_differential_probability(run_cryptosmt):
     """
-    Tests Mode 2 (findAllCharacteristics) for Speck-32 2 rounds weight 1.
+    Tests Mode 4 (Probability Estimation) for Speck-32 9 rounds differential.
+    Based on examples/speck/speck32_9rounds_diff.yaml.
     """
-    # Speck-32 2 rounds weight 1 has 30 characteristics (15 base * 2 rotations)
-    # Rotating by 1 bit might change MSB and thus the weight calculation.
-    # For weight 1, only bit 15 (ignored) or other bits.
-    args = ["--cipher", "speck", "--rounds", "2", "--wordsize", "16", "--mode", "2", "--sweight", "1", "--endweight", "2", "--bitwuzla"]
+    yaml_path = "examples/speck/speck32_9rounds_diff.yaml"
+    args = ["--inputfile", yaml_path, "--stp", "--endweight", "31"]
     result = run_cryptosmt(args)
     
     assert result.returncode == 0
-    assert "Finished weight 1. Total found: 30" in result.stdout
+    # This differential has exactly 1 trail of weight 30
+    assert "Total Trails found: 1" in result.stdout
+    assert "Final Probability (log2): -30.00" in result.stdout
 
 @pytest.mark.skipif(not solver_available(), reason="Solver not found")
 def test_simon_find_best_constants(run_cryptosmt):

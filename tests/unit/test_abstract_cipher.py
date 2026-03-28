@@ -51,7 +51,30 @@ def test_abstract_cipher_blocking():
     }
     
     out = StringIO()
+    # This calls self.get_blocking_constraints
     cipher.apply_common_constraints(out, params)
     val = out.getvalue()
     assert "BVXOR(x0, 0x1234)" in val
     assert "ASSERT(NOT(" in val
+
+def test_speck_blocking_custom():
+    from ciphers.speck import SpeckCipher
+    cipher = SpeckCipher()
+    
+    class MockChar:
+        def __init__(self, data): self.characteristic_data = data
+        
+    params = {
+        "rounds": 1, 
+        "wordsize": 16, 
+        "blockedCharacteristics": [MockChar({"x0": "0x8001"})]
+    }
+    
+    out = StringIO()
+    cipher.get_blocking_constraints(out, params["blockedCharacteristics"][0], params)
+    val = out.getvalue()
+    
+    # Should ignore MSB (15 bits)
+    assert "x0[14:0]" in val
+    # 0x8001 & 0x7FFF = 0x0001
+    assert "0bin000000000000001" in val
