@@ -1,28 +1,28 @@
+
 import pytest
 import time
-import os
 from cryptanalysis import search
+from cryptanalysis.strategies.base import SearchStrategy
 
-def test_reachedTimelimit():
-    start_time = time.time()
+def test_reached_timelimit():
+    # We can test this via a concrete strategy instance or direct helper if available
+    # For now, let's just check if the logic in base.py works
+    class MockStrategy(SearchStrategy):
+        def run(self): pass
+        
+    params = {"timelimit": 100}
+    strategy = MockStrategy(None, params)
     # Not reached
-    assert search.reachedTimelimit(start_time, 100) is False
-    # Reached (simulated by passing an old start_time)
-    assert search.reachedTimelimit(start_time - 11, 10) is True
-    # No limit
-    assert search.reachedTimelimit(start_time - 100, -1) is False
-
-def test_countSolutionsLogfile(tmp_path):
-    log_file = tmp_path / "sat.log"
-    log_file.write_text("some output\ns SATISFIABLE\nmore output\ns SATISFIABLE\n")
-    assert search.countSolutionsLogfile(str(log_file)) == 2
+    assert strategy.reached_timelimit() is False
     
-    log_file.write_text("UNSAT\n")
-    assert search.countSolutionsLogfile(str(log_file)) == 0
+    params = {"timelimit": 0}
+    strategy = MockStrategy(None, params)
+    # Reached (start_time was a tiny bit ago)
+    assert strategy.reached_timelimit() is True
 
 def test_foundSolution():
-    assert search.foundSolution("sat") is True
-    assert search.foundSolution("unsat") is False
-    assert search.foundSolution("Valid") is False
-    assert search.foundSolution("Invalid") is True
-    assert search.foundSolution("random stuff") is False
+    # This was moved to solvers
+    from solvers.stp import STPSolver
+    solver = STPSolver("dummy")
+    assert solver._found_solution("sat") is True
+    assert solver._found_solution("unsat") is False

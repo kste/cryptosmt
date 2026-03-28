@@ -14,9 +14,14 @@ def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> 
     Optimized to use fewer bitwise ORs.
     """
     char_vars = []
+    # State variables usually don't start with w (weight) or tmp or sout/fout
+    # We want to block based on the main state variables (x, y, S, X etc)
     for var, value in characteristic.characteristic_data.items():
-        if var.startswith('w'): continue
-        if value == "none": continue
+        # Exclude weight variables and intermediate variables
+        if var.startswith(('w', 'tmp', 'andout', 'sout', 'fout', 'X1_')): 
+            continue
+        if value == "none": 
+            continue
         char_vars.append(f"BVXOR({var}, {value})")
 
     if char_vars:

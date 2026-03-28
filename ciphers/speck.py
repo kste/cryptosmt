@@ -27,6 +27,13 @@ class SpeckCipher(AbstractCipher):
         """
         return ['x', 'y', 'w']
 
+    def validate_parameters(self, parameters):
+        """
+        Speck supports standard word sizes.
+        """
+        if "wordsize" not in parameters:
+            parameters["wordsize"] = 16
+
     def write_header(self, stp_file, parameters):
         """
         Custom header for Speck.

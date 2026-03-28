@@ -253,3 +253,41 @@ def test_skinny_related_tweak(run_cryptosmt):
     
     assert result.returncode == 0
     assert "Weight: 0" in result.stdout
+
+@pytest.mark.skipif(not solver_available(), reason="Solver not found")
+def test_simon_find_all_characteristics(run_cryptosmt):
+    """
+    Tests Mode 2 (findAllCharacteristics) for Simon-32 2 rounds weight 2.
+    """
+    # Simon-32 2 rounds weight 2 has 128 characteristics (16 base * 8 valid rotations)
+    args = ["--cipher", "simon", "--rounds", "2", "--wordsize", "16", "--mode", "2", "--sweight", "2", "--endweight", "3", "--bitwuzla"]
+    result = run_cryptosmt(args)
+    
+    assert result.returncode == 0
+    assert "Finished weight 2. Total found: 128" in result.stdout
+
+@pytest.mark.skipif(not solver_available(), reason="Solver not found")
+def test_speck_find_all_characteristics(run_cryptosmt):
+    """
+    Tests Mode 2 (findAllCharacteristics) for Speck-32 2 rounds weight 1.
+    """
+    # Speck-32 2 rounds weight 1 has 240 characteristics (15 base * 16 rotations)
+    args = ["--cipher", "speck", "--rounds", "2", "--wordsize", "16", "--mode", "2", "--sweight", "1", "--endweight", "2", "--bitwuzla"]
+    result = run_cryptosmt(args)
+    
+    assert result.returncode == 0
+    assert "Finished weight 1. Total found: 240" in result.stdout
+
+@pytest.mark.skipif(not solver_available(), reason="Solver not found")
+def test_simon_find_best_constants(run_cryptosmt):
+    """
+    Tests Mode 3 (findBestConstants) for a very small wordsize to keep it fast.
+    """
+    # Test wordsize 4 for speed
+    args = ["--cipher", "simon", "--rounds", "2", "--wordsize", "4", "--mode", "3", "--sweight", "0", "--endweight", "2", "--bitwuzla"]
+    result = run_cryptosmt(args)
+    
+    assert result.returncode == 0
+    assert "Constant Min Weights:" in result.stdout
+    # For wordsize 4, it should output a list of weights
+    assert "[" in result.stdout and "]" in result.stdout
