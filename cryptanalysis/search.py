@@ -4,7 +4,7 @@ Created on Apr 3, 2014
 @author: stefan
 '''
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple, Optional
 from parser import parsesolveroutput
 from config import (PATH_STP, PATH_BOOLECTOR, PATH_BITWUZLA, PATH_CRYPTOMINISAT, MAX_WEIGHT,
                     MAX_CHARACTERISTICS)
@@ -18,71 +18,87 @@ import os
 import time
 import logging
 from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 logger = logging.getLogger("cryptosmt")
+
+def solve_weight_task(cipher: AbstractCipher, parameters: Dict[str, Any], weight: int) -> Tuple[int, float]:
+    """
+    Task for solving a single weight, used for parallel probability estimation.
+    Returns (solutions, time_taken)
+    """
+    start_time = time.time()
+    rnd_string_tmp = f"{random.randrange(16**10):010x}"
+    stp_file = f"tmp/{cipher.name}_w{weight}_{rnd_string_tmp}.stp"
+    sat_logfile = f"tmp/satlog_w{weight}_{rnd_string_tmp}.tmp"
+    
+    # Update weight in local parameters
+    local_params = parameters.copy()
+    local_params["sweight"] = weight
+    cipher.createSTP(stp_file, local_params)
+    
+    solver = solvers.get_solver(local_params)
+    solutions = solver.solve_and_count(stp_file, sat_logfile)
+    
+    # Cleanup
+    if os.path.isfile(stp_file): os.remove(stp_file)
+    if os.path.isfile(sat_logfile): os.remove(sat_logfile)
+
+    return (solutions // 2, time.time() - start_time)
 
 def computeProbabilityOfDifferentials(cipher: AbstractCipher, parameters: Dict[str, Any]) -> float:
     """
     Computes the probability of the differential by iteratively
-    summing up all characteristics of a specific weight using
-    a SAT solver.
+    summing up all characteristics of a specific weight.
+    Parallelized version.
     """
-    rnd_string_tmp = f"{random.randrange(16**30):030x}"
     diff_prob = 0.0
     characteristics_found = 0
-    sat_logfile = f"tmp/satlog{rnd_string_tmp}.tmp"
-
     start_time = time.time()
+    
     solver = solvers.get_solver(parameters)
-
-    # Currently only STPSolver supports counting via CryptoMiniSat
     if not hasattr(solver, "solve_and_count"):
         logger.error(f"Solver {type(solver).__name__} does not support counting solutions.")
         return 0.0
 
-    logger.info(f"Computing probability for {cipher.name} - Rounds: {parameters['rounds']}")
+    logger.info(f"Computing probability for {cipher.name} - Rounds: {parameters['rounds']} using {parameters['threads']} threads")
     
-    # Progress bar for weight iterations
     weight_range = range(parameters["sweight"], parameters["endweight"])
-    pbar = tqdm(weight_range, desc="Weights", unit="weight", disable=parameters.get("quiet", False))
+    pbar = tqdm(total=len(weight_range), desc="Weights", unit="weight", disable=parameters.get("quiet", False))
 
-    try:
-        for weight in pbar:
-            weight_start_time = time.time()
-            parameters["sweight"] = weight
-            if reachedTimelimit(start_time, parameters["timelimit"]):
-                break
-
-            if os.path.isfile(sat_logfile):
-                os.remove(sat_logfile)
-
-            stp_file = f"tmp/{cipher.name}{rnd_string_tmp}.stp"
-            cipher.createSTP(stp_file, parameters)
-
-            pbar.set_description(f"Weight {weight}")
-            solutions = solver.solve_and_count(stp_file, sat_logfile)
-
-            # The encoded CNF contains every solution twice
-            solutions //= 2
-
-            # Print result
+    num_threads = parameters.get("threads", 1)
+    
+    if num_threads > 1:
+        with ProcessPoolExecutor(max_workers=num_threads) as executor:
+            future_to_weight = {executor.submit(solve_weight_task, cipher, parameters, w): w for w in weight_range}
+            
+            for future in as_completed(future_to_weight):
+                weight = future_to_weight[future]
+                try:
+                    solutions, time_taken = future.result()
+                    diff_prob += math.pow(2, -weight) * solutions
+                    characteristics_found += solutions
+                    
+                    pbar.update(1)
+                    postfix = {"trails": characteristics_found}
+                    if diff_prob > 0:
+                        postfix["log2(pr)"] = f"{math.log(diff_prob, 2):.2f}"
+                    pbar.set_postfix(postfix)
+                except Exception as exc:
+                    logger.error(f"Weight {weight} generated an exception: {exc}")
+    else:
+        # Sequential execution
+        for weight in weight_range:
+            solutions, time_taken = solve_weight_task(cipher, parameters, weight)
             diff_prob += math.pow(2, -weight) * solutions
             characteristics_found += solutions
-            
-            iteration_time = round(time.time() - weight_start_time, 2)
-            # Update progress bar stats
-            postfix = {"trails": characteristics_found, "time": f"{iteration_time}s"}
+            pbar.update(1)
+            postfix = {"trails": characteristics_found}
             if diff_prob > 0:
                 postfix["log2(pr)"] = f"{math.log(diff_prob, 2):.2f}"
             pbar.set_postfix(postfix)
 
-            if solutions > 0:
-                current_log_prob = math.log(diff_prob, 2)
-                logger.debug(f"Weight {weight}: {solutions} solutions found in {iteration_time}s. "
-                             f"Total trails: {characteristics_found}. "
-                             f"Current log2(prob): {current_log_prob:.2f}")
-    finally:
-        pbar.close()
+    pbar.close()
     
     if diff_prob > 0:
         logger.info(f"Total Trails found: {characteristics_found}")
@@ -109,30 +125,22 @@ def findBestConstants(cipher: AbstractCipher, parameters: Dict[str, Any]) -> Lis
     for beta in range(0, wordsize):
         for alpha in range(0, wordsize):
             weight = 0
-            #Filter cases where alpha = beta
             if alpha == beta:
                 constantMinWeights.append(0)
                 continue
-            #Filter symmetric cases
             if beta > alpha:
                 constantMinWeights.append(constantMinWeights[alpha * wordsize +
                                                              beta])
                 continue
-            #Filter gcd(alpha - beta, n) != 1 cases
             if math.gcd(alpha - beta, wordsize) != 1:
                 constantMinWeights.append(1)
                 continue
 
             while weight < parameters["endweight"]:
                 parameters["rotationconstants"] = [alpha, beta, gamma]
-
-                # Construct problem instance for given parameters
                 stp_file = f"tmp/{cipher.name}_{gamma}const.stp"
                 cipher.createSTP(stp_file, parameters)
-
                 result = solver.solve(stp_file)
-
-                # Check if a characteristic was found
                 if result.is_sat:
                     logger.info(f"Alpha: {alpha} Beta: {beta} Gamma: {gamma} Weight: {weight}")
                     break
@@ -142,73 +150,107 @@ def findBestConstants(cipher: AbstractCipher, parameters: Dict[str, Any]) -> Lis
     logger.info(f"Constant Min Weights: {constantMinWeights}")
     return constantMinWeights
 
+def solve_min_weight_task(cipher: AbstractCipher, parameters: Dict[str, Any], weight: int) -> Tuple[int, bool, Any]:
+    """
+    Worker task for minimum weight search.
+    Returns (weight, is_sat, result)
+    """
+    rnd_string_tmp = f"{random.randrange(16**10):010x}"
+    stp_file = f"tmp/{cipher.name}_minw{weight}_{rnd_string_tmp}.stp"
+    
+    local_params = parameters.copy()
+    local_params["sweight"] = weight
+    cipher.createSTP(stp_file, local_params)
+    
+    solver = solvers.get_solver(local_params)
+    result = solver.solve(stp_file)
+    
+    if os.path.isfile(stp_file): os.remove(stp_file)
+    return (weight, result.is_sat, result)
+
 def findMinWeightCharacteristic(cipher: AbstractCipher, parameters: Dict[str, Any]) -> int:
     """
-    Find a characteristic of minimal weight for the cipher
-    parameters = [rounds, wordsize, sweight, isIterative, fixedVariables]
+    Find a characteristic of minimal weight for the cipher.
+    Parallelized version.
     """
-
     logger.info(f"Starting search for characteristic with minimal weight")
-    logger.info(f"Cipher: {cipher.name}, Rounds: {parameters['rounds']}, Wordsize: {parameters['wordsize']}")
+    logger.info(f"Cipher: {cipher.name}, Rounds: {parameters['rounds']}, Wordsize: {parameters['wordsize']} using {parameters['threads']} threads")
 
     start_time = time.time()
-    solver = solvers.get_solver(parameters)
+    num_threads = parameters.get("threads", 1)
+    
+    sweight = parameters["sweight"]
+    endweight = parameters["endweight"]
+    
+    if num_threads <= 1:
+        # Fast path for sequential
+        solver = solvers.get_solver(parameters)
+        for weight in range(sweight, endweight):
+            if reachedTimelimit(start_time, parameters["timelimit"]): break
+            parameters["sweight"] = weight
+            stp_file = f"tmp/{cipher.name}{parameters['wordsize']}.stp"
+            cipher.createSTP(stp_file, parameters)
+            result = solver.solve(stp_file)
+            if result.is_sat:
+                return _process_found_min_weight(cipher, parameters, weight, result, start_time)
+        return endweight
 
-    # Progress bar for weight discovery
-    pbar = tqdm(range(parameters["sweight"], parameters["endweight"]), 
-                desc="Searching Weight", unit="w", disable=parameters.get("quiet", False))
-
-    found_weight = parameters["sweight"]
-    for weight in pbar:
-        weight_start_time = time.time()
-        found_weight = weight
-        if reachedTimelimit(start_time, parameters["timelimit"]):
-            break
-
-        pbar.set_description(f"Weight {weight}")
-        logger.debug(f"Testing weight {weight}...")
-
-        # Construct problem instance for given parameters
-        parameters["sweight"] = weight
-        stp_file = f"tmp/{cipher.name}{parameters['wordsize']}.stp"
-        cipher.createSTP(stp_file, parameters)
-
-        result = solver.solve(stp_file)
-
-        iteration_time = round(time.time() - weight_start_time, 2)
-        pbar.set_postfix({"last": f"{iteration_time}s"})
-
-        # Check if a characteristic was found
-        if result.is_sat:
-            current_time = round(time.time() - start_time, 2)
-            pbar.close()
-            logger.info(f"Characteristic found! Weight: {weight}, Time: {current_time}s")
+    # Parallel version
+    # We check in batches of num_threads to maintain "minimum" guarantee
+    current_min_found = None
+    best_result = None
+    
+    with ProcessPoolExecutor(max_workers=num_threads) as executor:
+        # We can't just check all weights in parallel because we must find the SMALLEST.
+        # But we can check a sliding window.
+        curr_weight = sweight
+        while curr_weight < endweight:
+            if reachedTimelimit(start_time, parameters["timelimit"]): break
             
-            characteristic = solver.parse_characteristic(result, cipher, parameters["rounds"])
-            characteristic.printText()
-
-            if parameters["dot"]:
-                with open(parameters["dot"], "w") as dot_file:
-                    dot_file.write("digraph graphname {")
-                    dot_file.write(characteristic.getDOTString())
-                    dot_file.write("}")
-                logger.info(f"Wrote .dot to {parameters['dot']}")
-                
-            if parameters["latex"]:
-                with open(parameters["latex"], "w") as tex_file:
-                    tex_file.write(characteristic.getTexString())
-                logger.info(f"Wrote .tex to {parameters['latex']}")                
-            return weight
+            # Submit a batch of weights
+            batch_size = num_threads
+            batch = range(curr_weight, min(curr_weight + batch_size, endweight))
+            future_to_weight = {executor.submit(solve_min_weight_task, cipher, parameters, w): w for w in batch}
             
-    pbar.close()
+            batch_results = {}
+            for future in as_completed(future_to_weight):
+                w, is_sat, res = future.result()
+                batch_results[w] = (is_sat, res)
+            
+            # Check batch in order to find SMALLEST weight that is SAT
+            for w in sorted(batch_results.keys()):
+                is_sat, res = batch_results[w]
+                if is_sat:
+                    return _process_found_min_weight(cipher, parameters, w, res, start_time)
+            
+            curr_weight += batch_size
+            
     logger.info("No characteristic found within the given weight/time limit.")
-    return found_weight
+    return endweight
+
+def _process_found_min_weight(cipher, parameters, weight, result, start_time):
+    current_time = round(time.time() - start_time, 2)
+    logger.info(f"Characteristic found! Weight: {weight}, Time: {current_time}s")
+    
+    solver = solvers.get_solver(parameters)
+    characteristic = solver.parse_characteristic(result, cipher, parameters["rounds"])
+    characteristic.printText()
+
+    if parameters["dot"]:
+        with open(parameters["dot"], "w") as dot_file:
+            dot_file.write("digraph graphname {")
+            dot_file.write(characteristic.getDOTString())
+            dot_file.write("}")
+        
+    if parameters["latex"]:
+        with open(parameters["latex"], "w") as tex_file:
+            tex_file.write(characteristic.getTexString())
+    return weight
 
 
 def findAllCharacteristics(cipher: AbstractCipher, parameters: Dict[str, Any]) -> None:
     """
-    Outputs all characteristics of a specific weight by excluding
-    solutions iteratively.
+    Outputs all characteristics of a specific weight.
     """
     rnd_string_tmp = f"{random.randrange(16**30):030x}"
     start_time = time.time()
@@ -217,7 +259,6 @@ def findAllCharacteristics(cipher: AbstractCipher, parameters: Dict[str, Any]) -
 
     logger.info(f"Finding all characteristics for {cipher.name} - Rounds: {parameters['rounds']}, Weight: {parameters['sweight']}")
 
-    # Using tqdm for counting found characteristics
     pbar = tqdm(desc="Found", unit=" char", disable=parameters.get("quiet", False))
 
     while not reachedTimelimit(start_time, parameters["timelimit"]) and \
@@ -226,17 +267,13 @@ def findAllCharacteristics(cipher: AbstractCipher, parameters: Dict[str, Any]) -
         stp_file = f"tmp/{cipher.name}{rnd_string_tmp}.stp"
 
         cipher.createSTP(stp_file, parameters)
-
         result = solver.solve(stp_file)
 
         iteration_time = round(time.time() - iteration_start_time, 2)
         pbar.set_postfix({"last": f"{iteration_time}s"})
 
-        # Check for solution
         if result.is_sat:
             characteristic = solver.parse_characteristic(result, cipher, parameters["rounds"])
-
-            # characteristic.printText() # Maybe too noisy for "find all"
             parameters["blockedCharacteristics"].append(characteristic)
             total_num_characteristics += 1
             pbar.update(1)
@@ -257,7 +294,6 @@ def findAllCharacteristics(cipher: AbstractCipher, parameters: Dict[str, Any]) -
                 dot_graph += characteristic.getDOTString()
             dot_file.write(dot_graph)
             dot_file.write("}")
-        logger.info(f"Wrote .dot to {parameters['dot']}")
         
     return
 

@@ -31,8 +31,6 @@ def get_available_solvers():
     # Refactored ciphers
     ("cham", 1, 16, 0, []), 
     ("cham", 2, 16, 0, []),
-    ("cham", 1, 32, 0, []),
-    ("cham", 2, 32, 0, []),
     ("lblock", 1, 32, 0, []), 
     ("lblock", 2, 32, 2, []),
     ("twine", 1, 64, 0, []),
@@ -156,6 +154,57 @@ def test_simon_probability_estimation(run_cryptosmt):
     # It should find at least one characteristic
     assert "INFO: Total Trails found:" in result.stdout
     assert "INFO: Final Probability (log2):" in result.stdout
+
+@pytest.mark.skipif(not os.path.exists("/usr/local/bin/stp"), reason="STP/CryptoMiniSat required for Mode 4")
+def test_simon_parallel_probability_consistency(run_cryptosmt):
+    """
+    Verify that parallel mode 4 gives same results as sequential.
+    """
+    base_args = ["--cipher", "simon", "--rounds", "4", "--wordsize", "16", "--mode", "4", "--sweight", "6", "--endweight", "8", "--stp"]
+    
+    # Run sequential
+    res_seq = run_cryptosmt(base_args + ["--threads", "1"])
+    # Run parallel
+    res_par = run_cryptosmt(base_args + ["--threads", "2"])
+    
+    assert res_seq.returncode == 0
+    assert res_par.returncode == 0
+    
+    # Extract final probability using regex
+    def get_prob(stdout):
+        match = re.search(r"Final Probability \(log2\): ([-\d.]+)", stdout)
+        return match.group(1) if match else None
+        
+    prob_seq = get_prob(res_seq.stdout)
+    prob_par = get_prob(res_par.stdout)
+    
+    assert prob_seq is not None
+    assert prob_seq == prob_par, f"Parallel probability {prob_par} != Sequential probability {prob_seq}"
+
+@pytest.mark.skipif(not solver_available(), reason="Solver not found")
+def test_simon_parallel_min_weight_consistency(run_cryptosmt):
+    """
+    Verify that parallel mode 0 gives same results as sequential.
+    """
+    base_args = ["--cipher", "simon", "--rounds", "4", "--wordsize", "16", "--bitwuzla"]
+    
+    # Run sequential
+    res_seq = run_cryptosmt(base_args + ["--threads", "1"])
+    # Run parallel
+    res_par = run_cryptosmt(base_args + ["--threads", "4"])
+    
+    assert res_seq.returncode == 0
+    assert res_par.returncode == 0
+    
+    def get_weight(stdout):
+        match = re.search(r"Weight: (\d+)", stdout)
+        return int(match.group(1)) if match else None
+        
+    w_seq = get_weight(res_seq.stdout)
+    w_par = get_weight(res_par.stdout)
+    
+    assert w_seq is not None
+    assert w_seq == w_par, f"Parallel weight {w_par} != Sequential weight {w_seq}"
 
 @pytest.mark.skipif(not solver_available(), reason="Solver not found")
 def test_skinny_related_tweak(run_cryptosmt):

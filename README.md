@@ -107,6 +107,32 @@ To use Bitwuzla for the example above:
 python3 cryptosmt.py --cipher simon --rounds 10 --wordsize 16 --bitwuzla
 ```
 
+## Parallel Search
+
+CryptoSMT supports parallel execution to utilize multiple CPU cores for faster searching. This is particularly effective for **Minimum Weight Search (Mode 0)** and **Probability Estimation (Mode 4)**.
+
+*   **`--threads N`:** Specifies the number of threads to use. 
+*   **Mode 0 (Min Weight):** Checks multiple weight values in a sliding window simultaneously.
+*   **Mode 4 (Probability):** Distributes weight iterations across threads to count characteristics in parallel.
+
+Example using 4 threads:
+```bash
+python3 cryptosmt.py --cipher simon --rounds 12 --wordsize 16 --threads 4
+```
+
+## Weight Encodings
+
+You can choose different ways to encode the Hamming weight constraints in SMT. Depending on the cipher and solver, some encodings can be significantly faster:
+
+*   **`bvplus` (Default):** Uses standard bit-vector addition. Best for modern solvers like Bitwuzla.
+*   **`sorter`:** Uses a Bitonic Sorting Network. Often faster for pure SAT-based searches or very high weights.
+*   **`totalizer`:** Uses a Unary Adder tree (Totalizer). A state-of-the-art encoding for cardinality constraints.
+
+Example using the totalizer encoding:
+```bash
+python3 cryptosmt.py --cipher present --rounds 8 --wordsize 64 --weightencoding totalizer
+```
+
 ## Logging and Progress
 
 CryptoSMT provides visual feedback using `tqdm` progress bars and standard Python `logging`. You can control the verbosity of the output using the following flags:
