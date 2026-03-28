@@ -35,7 +35,7 @@ The easiest way to deploy CryptoSMT with all high-performance solvers (STP, Bitw
 
 ```bash
 # Build the comprehensive cryptanalysis image
-docker build -t cryptosmt .
+docker build -t cryptosmt -f docker/Dockerfile .
 
 # Run the interactive environment
 docker run -it cryptosmt
