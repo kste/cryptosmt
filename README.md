@@ -1,124 +1,94 @@
 # CryptoSMT
 
-CryptoSMT is an easy to use tool for cryptanalysis of symmetric primitives likes 
-block ciphers or hash functions. It is based on SMT/SAT solvers like STP, Boolector, 
-CryptoMiniSat and provides a simple framework to use them for cryptanalytic techniques.
+**CryptoSMT** is a powerful and versatile tool for the cryptanalysis of symmetric primitives, including block ciphers, hash functions, and stream ciphers. By leveraging modern SMT (Satisfiability Modulo Theories) and SAT solvers, CryptoSMT provides an automated environment for proving security properties and discovering optimal cryptanalytic trails.
 
-Some of the features are:
-* Proof properties regarding the differential behavious of a primitive.
-* Find the best linear/differential trails.
-* Compute probability of a differential.
-* Find preimages for hash functions.
-* Recover a secret key.
+---
 
-The following primitives are supported by CryptoSMT at the moment: 
+### Key Capabilities
 
-###### Block Ciphers
-* Simon[3], 
-* Speck[3], 
-* Skinny[4],
-* Present[5],
-* Midori[6],
-* LBlock[7],
-* Sparx[8],
-* Twine[9],
-* Noekeon[10],
-* Prince[11],
-* Mantis[4],
-* Speckey[8],
-* Rectangle[12],
-* Cham[13],
-* CRAFT[21],
-* TRIFLE[22]
+*   **Optimal Trail Discovery**: Automatically find the best linear and differential characteristics for a wide range of ciphers.
+*   **Probability Estimation**: Accurately compute the probability of complex differentials using exact or approximate model counting.
+*   **High-Performance Engine**: Built-in support for high-performance solvers like **Bitwuzla**, **Boolector**, and **STP**.
+*   **Parallel Search**: Fully parallelized execution engine to utilize all available CPU cores.
+*   **Extensible Architecture**: Modular design based on an automated `AbstractCipher` framework, making it easy to add support for new primitives.
+---
 
-###### Hash Functions
-* Keccak[14]
+### Supported Primitives
 
-###### Stream Ciphers
-* Salsa[15], 
-* ChaCha[16]
+CryptoSMT includes models for a broad suite of modern cryptographic designs:
 
-###### Authenticated Encryption Ciphers
-* Ketje[17], 
-* Ascon[18]
+| Category | Primitives |
+| :--- | :--- |
+| **Block Ciphers** | Simon, Speck, Skinny, Present, Midori, LBlock, Twine, Sparx, Noekeon, Prince, Mantis, Rectangle, Cham, CRAFT, TRIFLE |
+| **Hash Functions** | Keccak (SHA-3), Ketje |
+| **Stream Ciphers** | Salsa20, ChaCha20 |
+| **Authenticated Encryption** | Ascon, Ketje |
+| **MACs / PRFs** | Chaskey, SipHash |
 
-###### Message Authentication Codes
-* Chaskey[19], 
-* SipHash[20]
+---
 
-Please note that at the moment not all features are available for all ciphers. A
-detailed description on the application of this tool on the SIMON block ciphers and
-how a differential/linear model for SIMON can be constructed is given in [1].
+## 🛠️ Getting Started
 
-## Installation
+### Installation via Docker (Recommended)
 
-CryptoSMT requires you to have [STP](https://github.com/stp/stp),
-[Cryptominisat](https://github.com/msoos/cryptominisat/) or [Bitwuzla](https://github.com/bitwuzla/bitwuzla) installed and setup the
-paths to the binaries in `config.py`. Further it requires the `pyyaml` which you
-can install using
+The easiest way to deploy CryptoSMT with all high-performance solvers (STP, Bitwuzla, Boolector, ApproxMC) is using Docker:
 
-    $ pip3 install pyyaml
+```bash
+# Build the comprehensive cryptanalysis image
+docker build -t cryptosmt .
 
-The easiest way to get all the external tools to run is with the provided
-Dockerfile. You can build a basic image using:
+# Run the interactive environment
+docker run -it cryptosmt
+```
 
-    cd docker/
-    docker build -t cryptosmt .
-    
-This includes building minisat, cryptominisat, STP, boolector, Bitwuzla and all
-dependencies. You can then run the image with:
+### Local Installation
 
-    docker run -it cryptosmt
+CryptoSMT requires Python 3.10+ and at least one SMT solver. 
 
-which gives you a ready to use setup of CryptoSMT.
+1.  Install dependencies:
+    ```bash
+    pip3 install pyyaml tqdm
+    ```
+2.  Install solvers (STP, Bitwuzla, or Boolector) and configure their paths in `config.py`.
 
-## Testing
+---
 
-CryptoSMT uses `pytest` for testing. You can run the tests using the provided
-Dockerfile:
+## 🧪 Usage Examples
 
-    docker build -t cryptosmt .
-    docker run --rm --entrypoint python3 cryptosmt -m pytest tests/
+### Finding an Optimal Differential Trail
+To find the minimum weight differential characteristic for **Simon-32/64** with 8 rounds:
+```bash
+python3 cryptosmt.py --cipher simon --rounds 8 --wordsize 16
+```
 
-This will run both unit tests and integration tests that verify the tool's 
-search functionality with different ciphers and solvers.
+### Estimating Differential Probability (Mode 4)
+Uses **Parallel Search** for high-speed probability estimation:
+```bash
+python3 cryptosmt.py --inputfile examples/simon/simon32_13rounds_diff.yaml --threads 4
+```
 
-## Solvers
+---
 
-CryptoSMT supports multiple SMT solvers for finding characteristics. While STP is the default, both Boolector and Bitwuzla often provide significant performance improvements for deeper searches.
+## 🔬 Advanced Features
+
+### Solvers
+CryptoSMT supports multiple backend solvers. While **STP** is the default, **Bitwuzla** generally provides the best performance for modern cryptanalysis.
 
 ### Supported Solvers:
 *   **STP (Default):** The original solver integrated in CryptoSMT.
-*   **Boolector:** Often much faster than STP for bit-vector problems. Use with `--boolector`.
-*   **Bitwuzla:** The successor to Boolector, generally offering the best performance. Use with `--bitwuzla`.
-*   **ApproxMC:** Provides approximate model counting for **Probability Estimation (Mode 4)**. Use with `--approxmc`.
+*   **Boolector:** Optimized for bit-vector problems. Use with `--boolector`.
+*   **Bitwuzla:** The high-performance successor to Boolector. Use with `--bitwuzla`.
+*   **ApproxMC:** Provides approximate model counting for massive solution spaces in **Mode 4**. Use with `--approxmc`.
 
 ### Exact vs. Approximate Counting
-
 When using **Mode 4**, CryptoSMT needs to count the number of characteristics for each weight.
 
-1.  **Exact Counting (Default):** Uses `CryptoMiniSat` to find every single solution. This is extremely fast when the number of trails is small (e.g., < 100,000), but becomes impossible if there are millions or billions of solutions.
-2.  **Approximate Counting (`--approxmc`):** Uses `ApproxMC` to estimate the number of solutions using hash-based sampling. 
+1.  **Exact Counting (Default):** Uses `CryptoMiniSat` to find every solution. Fast for small trail sets (< 100k).
+2.  **Approximate Counting (`--approxmc`):** Uses `ApproxMC` for hash-based sampling. Essential for complex differentials with millions or billions of solutions.
 
-**When to use ApproxMC:**
-ApproxMC has a fixed overhead but scales exceptionally well with the size of the solution space. You should use it when analyzing complex differentials where you expect a very large number of trails (e.g., $2^{20}$ or more), as exact counting would take far too long. For simple problems with few solutions, exact counting remains the faster choice.
+---
 
-### Benchmarks (SIMON-32/64, 10 rounds)
-
-The following table compares the performance (on a Macbook Pro M5) of the three solvers when searching for the minimum weight characteristic for 10 rounds of SIMON-32/64:
-
-| Solver | Weight Found | Time Taken | Performance vs STP |
-| :--- | :---: | :---: | :---: |
-| **STP (Default)** | 25 | **281.95s** (~4.7 min) | Baseline |
-| **Boolector** | 25 | **25.55s** | ~11x faster |
-| **Bitwuzla** | 25 | **10.69s** | **~26x faster** |
-
-To use Bitwuzla for the example above:
-```bash
-python3 cryptosmt.py --cipher simon --rounds 10 --wordsize 16 --bitwuzla
-```
-
-## Parallel Search
+### Parallel Search
 
 CryptoSMT supports parallel execution to utilize multiple CPU cores for faster searching. This is particularly effective for **Minimum Weight Search (Mode 0)** and **Probability Estimation (Mode 4)**.
 
@@ -131,140 +101,48 @@ Example using 4 threads:
 python3 cryptosmt.py --cipher simon --rounds 12 --wordsize 16 --threads 4
 ```
 
-## Weight Encodings
+---
+
+### Weight Encodings
 
 You can choose different ways to encode the Hamming weight constraints in SMT. Depending on the cipher and solver, some encodings can be significantly faster:
 
 *   **`bvplus` (Default):** Uses standard bit-vector addition. Best for modern solvers like Bitwuzla.
 *   **`sorter`:** Uses a Bitonic Sorting Network. Often faster for pure SAT-based searches or very high weights.
-*   **`totalizer`:** Uses a Unary Adder tree (Totalizer). A state-of-the-art encoding for cardinality constraints.
+*   **`totalizer`:** Uses a Unary Adder tree (Totalizer).
 
 Example using the totalizer encoding:
 ```bash
 python3 cryptosmt.py --cipher present --rounds 8 --wordsize 64 --weightencoding totalizer
 ```
 
-## Logging and Progress
+---
 
-CryptoSMT provides visual feedback using `tqdm` progress bars and standard Python `logging`. You can control the verbosity of the output using the following flags:
+## 📊 Benchmarks (SIMON-32/64, 10 rounds)
+
+The following table compares the performance (on a Macbook Pro M5) of the three solvers when searching for the minimum weight characteristic for 10 rounds of SIMON-32/64:
+
+| Solver | Weight Found | Time Taken | Performance vs STP |
+| :--- | :---: | :---: | :---: |
+| **STP (Default)** | 25 | **281.95s** (~4.7 min) | Baseline |
+| **Boolector** | 25 | **25.55s** | ~11x faster |
+| **Bitwuzla** | 25 | **10.69s** | **~26x faster** |
+
+---
+
+## 🛡️ Logging and Progress
+
+CryptoSMT provides visual feedback using `tqdm` progress bars and standard Python `logging`. 
 
 *   **Default:** Shows general progress and found characteristics with a progress bar.
 *   **`--verbose`:** Shows detailed information, including solver commands and raw output. Sets log level to `DEBUG`.
 *   **`--quiet`:** Disables the progress bar and only shows found results or errors. Sets log level to `WARNING`.
 
-## Usage
-
-As an example we will look at how CryptoSMT can be used to find the optimal
-differential characteristics for the block cipher Simon.
-
-Running the command
-    
-    $ python3 cryptosmt.py --cipher simon --rounds 8 --wordsize 16
-    
-will start the search for the optimal trail and you will see as output
-
-    simon - Rounds: 8 Wordsize: 16
-    ---
-    Weight: 0 Time: 0.0s
-    Weight: 1 Time: 0.08s
-    Weight: 2 Time: 0.16s
-    Weight: 3 Time: 0.44s
-    Weight: 4 Time: 0.74s
-    Weight: 5 Time: 0.89s
-    ...
-          
-CryptoSMT tries to find a differential trail with a given weight `w_i`. 
-If no such trail exists `w_i` is incremented and the search continues. 
-In this case the best trail has a weight of `18` and can be quickly 
-found:
-
-    Characteristic for simon - Rounds 8 - Wordsize 16 - Weight 18 - Time 13.15s
-    Rounds  x       y       w
-    -------------------------------
-    0       0x0040  0x0191  -2
-    1       0x0011  0x0040  -4
-    2       0x0004  0x0011  -2
-    3       0x0001  0x0004  -2
-    4       0x0000  0x0001  -0
-    5       0x0001  0x0000  -2
-    6       0x0004  0x0001  -2
-    7       0x0011  0x0004  -4
-    8       0x0040  0x0011  none
-
-    Weight: 18
-          
-CryptoSMT prints out the difference in the two state words `x_i`, `y_i` 
-and the probability for the transition between two rounds `w_i`.
-
-## Adding a cipher to the CryptoSMT's cipher suites
-
-Let's say you want to add "NewCipher" to the tool:
-1. Make a copy from an example in "./ciphers/" which is similar to the design you want to analyze (for example if you want an
-ARX, Speck might be a good start) and rename it to "NewCipher.py".
-2. Modify the content of "NewCipher.py" to adapt it to your cipher (here it's best to look at some examples, as it depends a lot on design).
-3. Update the file "cryptosmt.py": Add "NewCipher" in the import (line 8), and include it in the tool by adding it to the ciphersuite (line 25).
-4. Run "python3 cryptosmt.py --cipher NewCipher" to see if it works.
-
-## How does it work?
-
-We can describe the process of the CryptoSMT as the following steps:
-1. It creates an stp file which contains the SMT model of the differential cryptanaysis of the given cipher in CVC format (this file is placed in "./tmp/" folder)
-2. After generation of SMT model in CVC format, it calls an SMT solver to solve the generated model. The STP is used by default as SMT solver. You can also use Boolector or Bitwuzla as SMT solver. 
-3. The SMT model contains some inherent constraints which are used for modeling the differential propagation rules, and some additional constraints which are used to model the outside conditions like the fixed input/output differentials values. 
-4. One of the additional constraints is the starting weight (of the differential probability) constraint. The first SMT model is generated with the starting weight, and this model is changed repeatedly by increasing the weight by one, and each time, its satisfiability is checked by an SMT solver. The goal is to find the minimum weight which makes the model satisfiable. 
-5. If the SMT model is satisfiable for the first time, the weight (of the differential probability) which is used, is returned as the minimum weight (of the differential probability) as one of the output, and the process is stopped.
-
-These processes are almost realted to the mod0, which is used to find the best differential with maximum (minimum) differential probablity (weight).
+---
 
 ## Credits
 
 Special thanks to [Ralph Ankele](https://github.com/TheBananaMan) and [Hosein Hadipour](https://github.com/hadipourh) for their extensive contributions!
-
-## References
-[1] [Observations on the SIMON block cipher family](http://eprint.iacr.org/2015/145)
-
-[2] [Mind the Gap - A Closer Look at the Security of Block Ciphers against Differential Cryptanalysis](https://eprint.iacr.org/2018/689)
-
-[3] [The SIMON and SPECK Families of Lightweight Block Ciphers](https://eprint.iacr.org/2013/404)
-
-[4] [The SKINNY Family of Block Ciphers and its Low-Latency Variant MANTIS](https://eprint.iacr.org/2016/660)
-
-[5] [PRESENT: An Ultra-Lightweight Block Cipher](https://link.springer.com/chapter/10.1007/978-3-540-74735-2_31)
-
-[6] [Midori: A Block Cipher for Low Energy (Extended Version)](https://eprint.iacr.org/2015/1142)
-
-[7] [LBlock: A Lightweight Block Cipher](https://link.springer.com/chapter/10.1007/978-3-642-21554-4_19)
-
-[8] [Design Strategies for ARX with Provable Bounds: SPARX and LAX (Full Version)](https://eprint.iacr.org/2016/984)
-
-[9] [TWINE: A Lightweight Block Cipher for Multiple Platforms](https://pdfs.semanticscholar.org/26b9/d188fc506fb34247c57dc365547f961576d7.pdf)
-
-[10] [Nessie Proposal: NOEKEON](http://gro.noekeon.org/Noekeon-spec.pdf)
-
-[11] [PRINCE - A Low-latency Block Cipher for Pervasive Computing Applications (Full version)](https://eprint.iacr.org/2012/529)
-
-[12] [RECTANGLE: A Bit-slice Lightweight Block Cipher Suitable for Multiple Platforms](https://eprint.iacr.org/2014/084)
-
-[13] [CHAM: A Family of Lightweight Block Ciphers for Resource-Constrained Devices](https://link.springer.com/chapter/10.1007/978-3-319-78556-1_1)
-
-[14] [The Keccak reference](https://keccak.team/files/Keccak-reference-3.0.pdf)
-
-[15] [The Salsa20 family of stream ciphers](https://cr.yp.to/snuffle/salsafamily-20071225.pdf)
-
-[16] [ChaCha, a variant of Salsa20](https://cr.yp.to/chacha/chacha-20080128.pdf)
-
-[17] [CAESAR submission: Kђѡїђ v2](https://competitions.cr.yp.to/round3/ketjev2.pdf)
-
-[18] [Ascon v1.2 Submission to the CAESAR Competition](https://competitions.cr.yp.to/round3/asconv12.pdf)
-
-[19] [Chaskey: An Efficient MAC Algorithm for 32-bit Microcontrollers](https://eprint.iacr.org/2014/386)
-
-[20] [SipHash: a fast short-input PRF](https://131002.net/siphash/siphash.pdf)
-
-[21] [CRAFT: Lightweight Tweakable Block Cipher with Efficient Protection Against DFA Attacks](https://tosc.iacr.org/index.php/ToSC/article/view/7396)
-
-[22] [TRIFLE](https://csrc.nist.gov/CSRC/media/Projects/Lightweight-Cryptography/documents/round-1/spec-doc/trifle-spec.pdf)
-
 
 ## BibTex
 ```
