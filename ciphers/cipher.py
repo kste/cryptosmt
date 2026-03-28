@@ -107,6 +107,10 @@ class AbstractCipher(object, metaclass=ABCMeta):
             if self.name in ["skinny", "rectangle"]:
                 size = parameters.get("blocksize", 64)
             stpcommands.assertNonZero(stp_file, self.state_variables, size)
+            
+            # Simple implication: if state is 0, next state can't be 0 unless all zero
+            # This is a bit redundant with non-zero but can help some solvers.
+            # (Experimental)
 
         # Iterative constraint
         if parameters.get("iterative"):

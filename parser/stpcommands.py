@@ -11,10 +11,8 @@ from typing import List, Dict, TextIO, Any
 def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> None:
     """
     Adds an constraint to the stp stpfile that blocks the given characteristic.
+    Optimized to use fewer bitwise ORs.
     """
-    # Bitwise XOR of all variables in the characteristic
-    # If the XOR is zero, the characteristic is the same
-    # We want to block this, so we assert that the XOR is not zero
     char_vars = []
     for var, value in characteristic.characteristic_data.items():
         if var.startswith('w'): continue
@@ -22,9 +20,17 @@ def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> 
         char_vars.append(f"BVXOR({var}, {value})")
 
     if char_vars:
-        stpfile.write("ASSERT(NOT((")
-        stpfile.write(" | ".join(char_vars))
-        stpfile.write(f") = 0bin{'0' * wordsize}));\n")
+        # Group variables to reduce the depth of the OR tree
+        while len(char_vars) > 1:
+            new_vars = []
+            for i in range(0, len(char_vars), 2):
+                if i + 1 < len(char_vars):
+                    new_vars.append(f"({char_vars[i]} | {char_vars[i+1]})")
+                else:
+                    new_vars.append(char_vars[i])
+            char_vars = new_vars
+            
+        stpfile.write(f"ASSERT(NOT({char_vars[0]} = 0bin{'0' * wordsize}));\n")
     return
 
 
@@ -72,13 +78,23 @@ def assertNonZero(stpfile: TextIO, variables: List[str], wordsize: int) -> None:
 
 def getStringForNonZero(variables: List[str], wordsize: int) -> str:
     """
-    Asserts that no all-zero characteristic is allowed
+    Asserts that no all-zero characteristic is allowed.
+    Optimized by grouping ORs.
     """
     if not variables:
         return ""
-    command = "ASSERT(NOT(("
-    command += " | ".join(variables)
-    command += f") = 0bin{'0' * wordsize}));"
+    
+    v_list = variables.copy()
+    while len(v_list) > 1:
+        new_vars = []
+        for i in range(0, len(v_list), 2):
+            if i + 1 < len(v_list):
+                new_vars.append(f"({v_list[i]} | {v_list[i+1]})")
+            else:
+                new_vars.append(v_list[i])
+        v_list = new_vars
+        
+    command = f"ASSERT(NOT({v_list[0]} = 0bin{'0' * wordsize}));"
     return command
 
 
@@ -131,7 +147,6 @@ def setupWeightComputationSum(stpfile: TextIO, weight: int, p: List[str], wordsi
 
     if encoding in ["sorter", "totalizer"]:
         from . import encodings
-        # p contains words that should be summed bitwise
         bits = []
         for var in p:
             for bit in range(wordsize - ignoreMSBs):
@@ -155,10 +170,7 @@ def getWeightString(variables: List[str], wordsize: int, ignoreMSBs: int = 0, we
     for var in variables:
         tmp = "0bin00000000@(BVPLUS(8, "
         for bit in range(wordsize - ignoreMSBs):
-            # Ignore MSBs if they do not contribute to
-            # probability of the characteristic.
             tmp += f"0bin0000000@({var}[{bit}:{bit}]),"
-        # Pad the constraint if necessary
         if (wordsize - ignoreMSBs) == 1:
             tmp += "0bin0,"
         command += tmp[:-1] + ")),"
@@ -206,35 +218,17 @@ def getStringRightRotate(value: str, rotation: int, wordsize: int) -> str:
 
 def add4bitSbox(sbox: List[int], variables: List[str]) -> str:
     """
-    Adds the constraints for the S-box and the weight
-    for the differential transition.
-
-    sbox is a list representing the S-box.
-
-    variables should be a list containing the input and
-    output variables of the S-box and the weight variables.
-
-    S(x) = y
-
-    The probability of the transitions is
-    2^-{hw(w0||w1||w2||w3)}
-
-    w ... hamming weight from the DDT table
+    Adds the constraints for the S-box and the weight.
     """
     assert(len(sbox) == 16)
     assert(len(variables) == 12)
 
-    # First compute the DDT
     DDT = [[0]*16 for i in range(16)]
-
     for a in range(16):
         for b in range(16):
             DDT[a ^ b][sbox[a] ^ sbox[b]] += 1
 
-    # Construct DNF of all valid trails
     trails = []
-
-    # All zero trail with probability 1
     for input_diff in range(16):
         for output_diff in range(16):
             if DDT[input_diff][output_diff] != 0:
@@ -248,25 +242,22 @@ def add4bitSbox(sbox: List[int], variables: List[str]) -> str:
                 tmp.append((output_diff >> 1) & 1)
                 tmp.append((output_diff >> 0) & 1)
                 if DDT[input_diff][output_diff] == 2:
-                    tmp += [0, 1, 1, 1] # 2^-3
+                    tmp += [0, 1, 1, 1]
                 elif DDT[input_diff][output_diff] == 4:
-                    tmp += [0, 0, 1, 1] # 2^-2
+                    tmp += [0, 0, 1, 1]
                 elif DDT[input_diff][output_diff] == 8:
-                    tmp += [0, 0, 0, 1] # 2^-1
+                    tmp += [0, 0, 0, 1]
                 elif DDT[input_diff][output_diff] == 16:
                     tmp += [0, 0, 0, 0]
                 trails.append(tmp)
 
-    # Build CNF from invalid trails
     cnf = ""
     for prod in itertools.product([0, 1], repeat=len(trails[0])):
-        # Trail is not valid
         if list(prod) not in trails:
             expr = ["~" if x == 1 else "" for x in list(prod)]
             clause = ""
             for literal in range(12):
                 clause += f"{expr[literal]}{variables[literal]} | "
-
             cnf += f"({clause[:-2]}) &"
 
     return f"ASSERT({cnf[:-2]} = 0bin1);\n"

@@ -58,6 +58,16 @@ class SimonCipher(AbstractCipher):
         self.and_out = self.declare_variable_vector(stp_file, "andout", rounds, wordsize)
         self.w = self.declare_variable_vector_per_round(stp_file, "w", rounds, wordsize, is_weight=True)
 
+    def apply_constraints(self, stp_file, parameters):
+        """
+        Apply Simon-specific constraints.
+        """
+        # Symmetry breaking: force first bit of x0 to be 0
+        stp_file.write(f"ASSERT({self.x[0]}[0:0] = 0bin0);\n")
+
+        # Standard round loop from AbstractCipher template
+        super().apply_constraints(stp_file, parameters)
+
     def apply_round_constraints(self, stp_file, round_nr, parameters):
         """
         Simon round logic using components.

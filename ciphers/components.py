@@ -1,5 +1,5 @@
 
-from typing import List, TextIO
+from typing import List, TextIO, Tuple, Any
 from parser import stpcommands
 
 def add_4bit_sbox(stp_file: TextIO, sbox: List[int], inputs: List[str], outputs: List[str], weights: List[str]):
@@ -13,6 +13,26 @@ def add_4bit_sbox(stp_file: TextIO, sbox: List[int], inputs: List[str], outputs:
     variables = inputs + outputs + weights
     command = stpcommands.add4bitSbox(sbox, variables)
     stp_file.write(command)
+
+def add_4bit_sbox_at_pos(stp_file: TextIO, sbox: List[int], pos: int, 
+                         in_var: str, out_var: str, w_var: str):
+    """
+    Adds constraints for a 4-bit S-box at a specific bit position.
+    pos is the index of the nibble (0 is bits 0-3).
+    """
+    inputs = [f"{in_var}[{4*pos + 3}:{4*pos + 3}]",
+              f"{in_var}[{4*pos + 2}:{4*pos + 2}]",
+              f"{in_var}[{4*pos + 1}:{4*pos + 1}]",
+              f"{in_var}[{4*pos + 0}:{4*pos + 0}]"]
+    outputs = [f"{out_var}[{4*pos + 3}:{4*pos + 3}]",
+               f"{out_var}[{4*pos + 2}:{4*pos + 2}]",
+               f"{out_var}[{4*pos + 1}:{4*pos + 1}]",
+               f"{out_var}[{4*pos + 0}:{4*pos + 0}]"]
+    weights = [f"{w_var}[{4*pos + 3}:{4*pos + 3}]",
+               f"{w_var}[{4*pos + 2}:{4*pos + 2}]",
+               f"{w_var}[{4*pos + 1}:{4*pos + 1}]",
+               f"{w_var}[{4*pos + 0}:{4*pos + 0}]"]
+    add_4bit_sbox(stp_file, sbox, inputs, outputs, weights)
 
 def add_bit_permutation(stp_file: TextIO, input_var: str, output_var: str, permutation: List[int], wordsize: int):
     """
@@ -61,6 +81,38 @@ def add_and_differential(stp_file: TextIO, in1: str, in2: str, out: str):
     """
     stp_file.write(f"ASSERT({stpcommands.getStringForAndDifferential(in1, in2, out)} = 0bin0);\n")
 
+def add_simon_round_constraints(stp_file: TextIO, x_in: str, y_in: str, x_out: str, y_out: str, 
+                                and_out: str, w: str, wordsize: int, 
+                                rot_alpha: int, rot_beta: int, rot_gamma: int):
+    """
+    Optimized Simon round logic.
+    """
+    from parser.stpcommands import getStringLeftRotate as rotl
+    
+    # y[i+1] = x[i]
+    stp_file.write(f"ASSERT({y_out} = {x_in});\n")
+
+    x_in_rotalpha = rotl(x_in, rot_alpha, wordsize)
+    x_in_rotbeta = rotl(x_in, rot_beta, wordsize)
+    
+    # getDoubleBits logic
+    doublebits = f"({rotl(x_in, rot_beta, wordsize)} & ~{rotl(x_in, rot_alpha, wordsize)} & {rotl(x_in, 2 * rot_alpha - rot_beta, wordsize)})"
+    varibits = f"({x_in_rotalpha} | {x_in_rotbeta})"
+
+    # Combined validity check: and_out must be a subset of varibits AND satisfy double-bit rule
+    valid_expr = f"(({and_out} & ~{varibits}) | (BVXOR({and_out}, {rotl(and_out, rot_alpha - rot_beta, wordsize)}) & {doublebits}))"
+    stp_file.write(f"ASSERT({valid_expr} = 0x{'0' * (wordsize // 4)});\n")
+
+    # If x_in is all 1s, and_out must be even.
+    # Fixed syntax: use bitwise expression instead of formula in IF
+    stp_file.write(f"ASSERT((IF {x_in} = 0x{'f' * (wordsize // 4)} THEN {and_out}[0:0] ELSE 0bin0 ENDIF) = 0bin0);\n")
+
+    # Assert XORs: x_out = (x_in <<< gamma) ^ y_in ^ and_out
+    stp_file.write(f"ASSERT({x_out} = BVXOR({rotl(x_in, rot_gamma, wordsize)}, BVXOR({y_in}, {and_out})));\n")
+
+    # Weight computation
+    stp_file.write(f"ASSERT({w} = (IF {x_in} = 0x{'f' * (wordsize // 4)} THEN BVSUB({wordsize},0x{'f' * (wordsize // 4)},0x{'0'*((wordsize // 4) - 1)}1) ELSE BVXOR({varibits}, {doublebits}) ENDIF));\n")
+
 def add_speck_weight(stp_file: TextIO, w: str, x_in_rot: str, y_in: str, x_out: str):
     """
     Weight computation for Speck.
@@ -69,63 +121,6 @@ def add_speck_weight(stp_file: TextIO, w: str, x_in_rot: str, y_in: str, x_out: 
     command += stpcommands.getStringEq(x_in_rot, y_in, x_out)
     command += ");\n"
     stp_file.write(command)
-
-def add_simon_round_constraints(stp_file: TextIO, x_in: str, y_in: str, x_out: str, y_out: str, 
-                                and_out: str, w: str, wordsize: int, 
-                                rot_alpha: int, rot_beta: int, rot_gamma: int):
-    """
-    Simon round logic implementation using stpcommands helper strings.
-    """
-    from parser.stpcommands import getStringLeftRotate as rotl
-    command = f"ASSERT({y_out} = {x_in});\n"
-
-    x_in_rotalpha = rotl(x_in, rot_alpha, wordsize)
-    x_in_rotbeta = rotl(x_in, rot_beta, wordsize)
-
-    # Use Simon's internal model for valid difference and weight
-    # This is complex enough that we keep it as one block for now
-    # but use the constants passed in.
-    
-    # Dependent inputs logic
-    varibits = f"({x_in_rotalpha} | {x_in_rotbeta})"
-    
-    # getDoubleBits logic
-    doublebits = f"({rotl(x_in, rot_beta, wordsize)} & ~{rotl(x_in, rot_alpha, wordsize)} & {rotl(x_in, 2 * rot_alpha - rot_beta, wordsize)})"
-
-    # Check for valid difference
-    firstcheck = f"({and_out} & ~{varibits})"
-    secondcheck = f"(BVXOR({and_out}, {rotl(and_out, rot_alpha - rot_beta, wordsize)}) & {doublebits})"
-    thirdcheck = f"(IF {x_in} = 0x{'f' * (wordsize // 4)} THEN BVMOD({wordsize}, {and_out}, 0x{'0' * (wordsize // 4 - 1)}2) ELSE 0x{'0' * (wordsize // 4)} ENDIF)"
-
-    command += f"ASSERT(({firstcheck} | {secondcheck} | {thirdcheck}) = 0x{'0' * (wordsize // 4)});\n"
-
-    # Assert XORs
-    command += f"ASSERT({x_out} = BVXOR({rotl(x_in, rot_gamma, wordsize)}, BVXOR({y_in}, {and_out})));\n"
-
-    # Weight computation
-    command += f"ASSERT({w} = (IF {x_in} = 0x{'f' * (wordsize // 4)} THEN BVSUB({wordsize},0x{'f' * (wordsize // 4)},0x{'0'*((wordsize // 4) - 1)}1) ELSE BVXOR({varibits}, {doublebits}) ENDIF));\n"
-
-    stp_file.write(command)
-
-def add_4bit_sbox_at_pos(stp_file: TextIO, sbox: List[int], pos: int, 
-                         in_var: str, out_var: str, w_var: str):
-    """
-    Adds constraints for a 4-bit S-box at a specific bit position.
-    pos is the index of the nibble (0 is bits 0-3).
-    """
-    inputs = [f"{in_var}[{4*pos + 3}:{4*pos + 3}]",
-              f"{in_var}[{4*pos + 2}:{4*pos + 2}]",
-              f"{in_var}[{4*pos + 1}:{4*pos + 1}]",
-              f"{in_var}[{4*pos + 0}:{4*pos + 0}]"]
-    outputs = [f"{out_var}[{4*pos + 3}:{4*pos + 3}]",
-               f"{out_var}[{4*pos + 2}:{4*pos + 2}]",
-               f"{out_var}[{4*pos + 1}:{4*pos + 1}]",
-               f"{out_var}[{4*pos + 0}:{4*pos + 0}]"]
-    weights = [f"{w_var}[{4*pos + 3}:{4*pos + 3}]",
-               f"{w_var}[{4*pos + 2}:{4*pos + 2}]",
-               f"{w_var}[{4*pos + 1}:{4*pos + 1}]",
-               f"{w_var}[{4*pos + 0}:{4*pos + 0}]"]
-    add_4bit_sbox(stp_file, sbox, inputs, outputs, weights)
 
 def add_assignment(stp_file: TextIO, out: str, in_var: str):
     """

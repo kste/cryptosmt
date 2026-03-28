@@ -199,18 +199,28 @@ def findMinWeightCharacteristic(cipher: AbstractCipher, parameters: Dict[str, An
     sweight = parameters["sweight"]
     endweight = parameters["endweight"]
     
+    pbar = tqdm(range(sweight, endweight), desc="Searching Weight", unit="w", 
+                disable=parameters.get("quiet", False))
+
     if num_threads <= 1:
         # Fast path for sequential
-        solver = solvers.get_solver(parameters)
-        for weight in range(sweight, endweight):
+        for weight in pbar:
             if reachedTimelimit(start_time, parameters["timelimit"]): break
-            parameters["sweight"] = weight
+            pbar.set_description(f"Weight {weight}")
+            
+            local_params = parameters.copy()
+            local_params["sweight"] = weight
             stp_file = f"tmp/{cipher.name}{parameters['wordsize']}.stp"
-            cipher.createSTP(stp_file, parameters)
+            cipher.createSTP(stp_file, local_params)
+            
+            solver = solvers.get_solver(local_params)
             result = solver.solve(stp_file)
+            
             if result.is_sat:
+                pbar.close()
                 return _process_found_min_weight(cipher, parameters, weight, result, start_time)
         
+        pbar.close()
         logger.info(f"No characteristic found within the given weight/time limit. Total Search Time: {round(time.time() - start_time, 2)}s")
         return endweight
 
@@ -222,6 +232,8 @@ def findMinWeightCharacteristic(cipher: AbstractCipher, parameters: Dict[str, An
             
             batch_size = num_threads
             batch = range(curr_weight, min(curr_weight + batch_size, endweight))
+            pbar.set_description(f"Weights {batch.start}-{batch.stop-1}")
+            
             future_to_weight = {executor.submit(solve_min_weight_task, cipher, parameters, w): w for w in batch}
             
             batch_results = {}
@@ -230,12 +242,15 @@ def findMinWeightCharacteristic(cipher: AbstractCipher, parameters: Dict[str, An
                 batch_results[w] = (is_sat, res)
             
             for w in sorted(batch_results.keys()):
+                pbar.update(1)
                 is_sat, res = batch_results[w]
                 if is_sat:
+                    pbar.close()
                     return _process_found_min_weight(cipher, parameters, w, res, start_time)
             
             curr_weight += batch_size
             
+    pbar.close()
     logger.info(f"No characteristic found within the given weight/time limit. Total Search Time: {round(time.time() - start_time, 2)}s")
     return endweight
 
