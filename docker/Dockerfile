@@ -1,6 +1,7 @@
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm-256color
 
 # Install all packages including solvers available in repo
 RUN apt-get update && apt-get install -y \
@@ -18,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     python3-pytest \
     python3-pytest-mock \
     python3-tqdm \
+    python3-rich \
     libboost-all-dev \
     bison \
     flex \

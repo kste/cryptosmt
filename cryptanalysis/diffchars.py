@@ -90,6 +90,29 @@ class DifferentialCharacteristic(object):
         print("Weight: " + str(int(weight_clean, 16)))
         return
 
+    def get_rich_table(self):
+        """
+        Returns a rich Table representation of the characteristic.
+        """
+        from rich.table import Table
+        from rich import box
+        
+        weight_clean = str(self.weight).replace("0x", "").replace("#x", "")
+        weight_val = int(weight_clean, 16)
+        
+        table = Table(title=f"Optimal Trail (Weight: {weight_val})", 
+                      box=box.ROUNDED, expand=True, title_style="bold green")
+        
+        data = self.getData()
+        table.add_column("Round", justify="right", style="cyan")
+        for word in self.print_format:
+            table.add_column(word, justify="left", style="magenta")
+            
+        for idx, row in enumerate(data):
+            table.add_row(str(idx), *row)
+            
+        return table
+
     def getDOTString(self):
         """
         Get the trail in .dot compatible format.

@@ -39,8 +39,12 @@ class AllCharacteristicsStrategy(SearchStrategy):
                 self.parameters["blockedCharacteristics"].append(characteristic)
                 total_num_characteristics += 1
                 pbar.update(1)
+                if self.reporter:
+                    self.reporter.add_trail(self.parameters["sweight"], "Found character", characteristic=characteristic)
             else:
                 logger.info(f"Finished weight {self.parameters['sweight']}. Total found: {total_num_characteristics}")
+                if self.reporter:
+                    self.reporter.update_weight(self.parameters["sweight"] + 1)
                 self.parameters["sweight"] += 1
                 total_num_characteristics = 0
                 pbar.reset()

@@ -275,14 +275,16 @@ def main():
     args = parser.parse_args()
     params = loadparameters(args)
 
-    # Set up logging
+    # Setup logging
     log_level = logging.INFO
-    if params.verbose:
+    if args.verbose:
         log_level = logging.DEBUG
-    elif params.quiet:
+    elif args.quiet:
         log_level = logging.WARNING
-    
-    logging.basicConfig(level=log_level, format='%(levelname)s: %(message)s')
+
+    from rich.logging import RichHandler
+    logging.basicConfig(level=log_level, format="%(message)s", 
+                        datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)])
 
     # Check if enviroment is setup correctly.
     checkenviroment()

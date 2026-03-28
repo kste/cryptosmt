@@ -5,7 +5,6 @@ import logging
 import random
 import math
 from typing import Dict, Any, Tuple
-from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from .base import SearchStrategy
@@ -46,9 +45,7 @@ class ProbabilityStrategy(SearchStrategy):
                     f"using {num_threads} threads (ApproxMC: {approxmc})")
         
         weight_range = range(self.parameters["sweight"], self.parameters["endweight"])
-        pbar = tqdm(total=len(weight_range), desc="Weights", unit="weight", 
-                    disable=self.parameters.get("quiet", False))
-
+        
         diff_prob = 0.0
         characteristics_found = 0
         weight_results = {}
@@ -64,27 +61,25 @@ class ProbabilityStrategy(SearchStrategy):
                         weight_results[weight] = solutions
                         diff_prob += math.pow(2, -weight) * solutions
                         characteristics_found += solutions
-                        self._update_pbar(pbar, characteristics_found, diff_prob)
+                        if self.reporter:
+                            self.reporter.update_weight(weight)
+                            self.reporter.add_trail(weight, f"Found {solutions} trails", count=solutions, prob=diff_prob)
             else:
                 for weight in weight_range:
                     if self.reached_timelimit(): break
+                    if self.reporter: self.reporter.update_weight(weight)
+                    
                     _, solutions = _solve_weight_count_task(self.cipher, self.parameters, weight, approxmc)
                     weight_results[weight] = solutions
                     diff_prob += math.pow(2, -weight) * solutions
                     characteristics_found += solutions
-                    self._update_pbar(pbar, characteristics_found, diff_prob)
+                    if self.reporter:
+                        self.reporter.add_trail(weight, f"Found {solutions} trails", count=solutions, prob=diff_prob)
         finally:
-            pbar.close()
+            pass
 
         self._print_summary(weight_results, characteristics_found, diff_prob)
         return diff_prob
-
-    def _update_pbar(self, pbar, found, prob):
-        pbar.update(1)
-        postfix = {"trails": found}
-        if prob > 0:
-            postfix["log2(pr)"] = f"{math.log(prob, 2):.2f}"
-        pbar.set_postfix(postfix)
 
     def _print_summary(self, weight_results, found, prob):
         if prob > 0:

@@ -4,7 +4,6 @@ import os
 import logging
 import random
 from typing import Dict, Any, Tuple
-from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from .base import SearchStrategy
@@ -32,20 +31,16 @@ def _solve_min_weight_task(cipher, parameters, weight):
 class MinWeightStrategy(SearchStrategy):
     def run(self) -> int:
         logger.info(f"Starting search for characteristic with minimal weight")
-        logger.info(f"Cipher: {self.cipher.name}, Rounds: {self.parameters['rounds']}, "
-                    f"Wordsize: {self.parameters['wordsize']} using {self.parameters['threads']} threads")
 
         num_threads = self.parameters.get("threads", 1)
         sweight = self.parameters["sweight"]
         endweight = self.parameters["endweight"]
         
-        pbar = tqdm(range(sweight, endweight), desc="Searching Weight", unit="w", 
-                    disable=self.parameters.get("quiet", False))
-
         if num_threads <= 1:
-            for weight in pbar:
+            for weight in range(sweight, endweight):
                 if self.reached_timelimit(): break
-                pbar.set_description(f"Weight {weight}")
+                if self.reporter:
+                    self.reporter.update_weight(weight)
                 
                 local_params = self.parameters.copy()
                 local_params["sweight"] = weight
@@ -54,7 +49,6 @@ class MinWeightStrategy(SearchStrategy):
                 
                 result = self.solver.solve(stp_file)
                 if result.is_sat:
-                    pbar.close()
                     return self._process_result(weight, result)
         else:
             with ProcessPoolExecutor(max_workers=num_threads) as executor:
@@ -64,7 +58,6 @@ class MinWeightStrategy(SearchStrategy):
                     
                     batch_size = num_threads
                     batch = range(curr_weight, min(curr_weight + batch_size, endweight))
-                    pbar.set_description(f"Weights {batch.start}-{batch.stop-1}")
                     
                     future_to_weight = {executor.submit(_solve_min_weight_task, self.cipher, self.parameters, w): w for w in batch}
                     
@@ -74,20 +67,22 @@ class MinWeightStrategy(SearchStrategy):
                         batch_results[w] = (is_sat, res)
                     
                     for w in sorted(batch_results.keys()):
-                        pbar.update(1)
+                        if self.reporter: self.reporter.update_weight(w)
                         is_sat, res = batch_results[w]
                         if is_sat:
-                            pbar.close()
                             return self._process_result(w, res)
                     curr_weight += batch_size
 
-        pbar.close()
         logger.info(f"No characteristic found within limit. Total Search Time: {self.get_elapsed_time()}s")
         return endweight
 
     def _process_result(self, weight, result):
-        logger.info(f"Characteristic found! Weight: {weight}, Total Search Time: {self.get_elapsed_time()}s")
         characteristic = self.solver.parse_characteristic(result, self.cipher, self.parameters["rounds"])
+        
+        if self.reporter:
+            self.reporter.add_trail(weight, "Found optimal trail", characteristic=characteristic)
+            
+        logger.info(f"Characteristic found! Weight: {weight}, Total Search Time: {self.get_elapsed_time()}s")
         characteristic.printText()
 
         if self.parameters.get("dot"):

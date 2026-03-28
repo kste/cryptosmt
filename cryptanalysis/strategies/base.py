@@ -9,11 +9,12 @@ import solvers
 logger = logging.getLogger("cryptosmt")
 
 class SearchStrategy(ABC):
-    def __init__(self, cipher: AbstractCipher, parameters: Dict[str, Any]):
+    def __init__(self, cipher: AbstractCipher, parameters: Dict[str, Any], reporter=None):
         self.cipher = cipher
         self.parameters = parameters
         self.start_time = time.time()
         self.solver = solvers.get_solver(parameters)
+        self.reporter = reporter
 
     @abstractmethod
     def run(self) -> Any:
