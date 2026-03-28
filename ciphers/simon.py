@@ -62,9 +62,6 @@ class SimonCipher(AbstractCipher):
         """
         Apply Simon-specific constraints.
         """
-        # Symmetry breaking: force first bit of x0 to be 0
-        stp_file.write(f"ASSERT({self.x[0]}[0:0] = 0bin0);\n")
-
         # Standard round loop from AbstractCipher template
         super().apply_constraints(stp_file, parameters)
 

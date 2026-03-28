@@ -122,6 +122,25 @@ def add_speck_weight(stp_file: TextIO, w: str, x_in_rot: str, y_in: str, x_out: 
     command += ");\n"
     stp_file.write(command)
 
+def add_speck_round_constraints(stp_file: TextIO, x_in: str, y_in: str, x_out: str, y_out: str, 
+                                 w: str, wordsize: int, rot_alpha: int, rot_beta: int):
+    """
+    Optimized Speck round logic.
+    """
+    from parser.stpcommands import getStringRightRotate as rotr
+    from parser.stpcommands import getStringLeftRotate as rotl
+    
+    # x_out = (x_in >>> alpha) + y_in
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(rotr(x_in, rot_alpha, wordsize), y_in, x_out, wordsize)});\n")
+    
+    # y_out = (y_in <<< beta) ^ x_out
+    stp_file.write(f"ASSERT({y_out} = BVXOR({rotl(y_in, rot_beta, wordsize)}, {x_out}));\n")
+    
+    # Weight computation
+    stp_file.write(f"ASSERT({w} = ~")
+    stp_file.write(stpcommands.getStringEq(rotr(x_in, rot_alpha, wordsize), y_in, x_out))
+    stp_file.write(");\n")
+
 def add_assignment(stp_file: TextIO, out: str, in_var: str):
     """
     Adds a simple assignment/equality constraint.

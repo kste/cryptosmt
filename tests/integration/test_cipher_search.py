@@ -89,6 +89,36 @@ def test_simon_solvers_consistency(run_cryptosmt, rounds, expected_weight):
     
     assert results[first_solver] == expected_weight
 
+@pytest.mark.skipif(len(get_available_solvers()) < 2, reason="Need at least two solvers for consistency check")
+def test_speck_solvers_consistency(run_cryptosmt):
+    """
+    Check if different solvers return the same minimum weight for Speck-32 6 rounds.
+    Weight for 6 rounds is known to be 13.
+    """
+    solvers = get_available_solvers()
+    results = {}
+    rounds = 6
+    expected_weight = 13
+    
+    for solver in solvers:
+        args = ["--cipher", "speck", "--rounds", str(rounds), "--wordsize", "16"]
+        if solver != "stp":
+            args.append(f"--{solver}")
+            
+        result = run_cryptosmt(args)
+        assert result.returncode == 0
+        
+        match = re.search(r"Weight: (\d+)", result.stdout)
+        assert match, f"Could not find weight in output for {solver}"
+        results[solver] = int(match.group(1))
+        
+    first_solver = solvers[0]
+    for solver in solvers[1:]:
+        assert results[solver] == results[first_solver], \
+            f"Solver mismatch for Speck: {first_solver} found {results[first_solver]}, but {solver} found {results[solver]}"
+    
+    assert results[first_solver] == expected_weight
+
 @pytest.mark.skipif(not solver_available(), reason="Solver not found")
 def test_keccak_challenge(run_cryptosmt):
     """

@@ -55,35 +55,18 @@ class SpeckCipher(AbstractCipher):
         self.y = self.declare_variable_vector(stp_file, "y", rounds, wordsize, is_state=True)
         self.w = self.declare_variable_vector_per_round(stp_file, "w", rounds, wordsize, is_weight=True)
         
-        # Temp variables for rotations
-        self.x_rot = [f"x{i}rot" for i in range(rounds)]
-        self.y_rot = [f"y{i}rot" for i in range(rounds)]
-        stpcommands.setupVariables(stp_file, self.x_rot, wordsize)
-        stpcommands.setupVariables(stp_file, self.y_rot, wordsize)
-
         # Speck specific: ignore MSB for weight computation
         parameters["ignore_msbs"] = 1
 
     def apply_round_constraints(self, stp_file, round_nr, parameters):
         """
-        Speck round logic using components.
+        Speck round logic using optimized components.
         """
         wordsize = parameters["wordsize"]
-        
-        # x_rot = x_in >>> alpha
-        components.add_rotation_right(stp_file, self.x_rot[round_nr], self.x[round_nr], self.rot_alpha, wordsize)
-        
-        # x_out = x_rot + y_in
-        components.add_addition(stp_file, self.x_rot[round_nr], self.y[round_nr], self.x[round_nr+1], wordsize)
-        
-        # y_rot = y_in <<< beta
-        components.add_rotation_left(stp_file, self.y_rot[round_nr], self.y[round_nr], self.rot_beta, wordsize)
-        
-        # y_out = x_out xor y_rot
-        components.add_xor(stp_file, self.y[round_nr+1], [self.x[round_nr+1], self.y_rot[round_nr]])
-        
-        # Weight
-        components.add_speck_weight(stp_file, self.w[round_nr], self.x_rot[round_nr], self.y[round_nr], self.x[round_nr+1])
+        components.add_speck_round_constraints(stp_file, self.x[round_nr], self.y[round_nr],
+                                               self.x[round_nr+1], self.y[round_nr+1],
+                                               self.w[round_nr], wordsize,
+                                               self.rot_alpha, self.rot_beta)
 
     def apply_iterative_constraints(self, stp_file, parameters):
         """
