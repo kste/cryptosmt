@@ -141,6 +141,66 @@ def add_speck_round_constraints(stp_file: TextIO, x_in: str, y_in: str, x_out: s
     stp_file.write(stpcommands.getStringEq(rotr(x_in, rot_alpha, wordsize), y_in, x_out))
     stp_file.write(");\n")
 
+def add_rectangle_sbox(stp_file: TextIO, sbox: List[int], i: int, sc_in: str, sr: str, w: str):
+    """
+    Vertical bit-slice S-box for Rectangle.
+    """
+    inputs = [f"{sc_in}[{i + 48}:{i + 48}]",
+              f"{sc_in}[{i + 32}:{i + 32}]",
+              f"{sc_in}[{i + 16}:{i + 16}]",
+              f"{sc_in}[{i + 0}:{i + 0}]"]
+    outputs = [f"{sr}[{i + 48}:{i + 48}]",
+               f"{sr}[{i + 32}:{i + 32}]",
+               f"{sr}[{i + 16}:{i + 16}]",
+               f"{sr}[{i + 0}:{i + 0}]"]
+    weights = [f"{w}[{i + 48}:{i + 48}]",
+               f"{w}[{i + 32}:{i + 32}]",
+               f"{w}[{i + 16}:{i + 16}]",
+               f"{w}[{i + 0}:{i + 0}]"]
+    add_4bit_sbox(stp_file, sbox, inputs, outputs, weights)
+
+def add_midori_mix_columns(stp_file: TextIO, mc: str, sb_out: str):
+    """
+    MixColumns for Midori (bitwise XOR).
+    """
+    for col in range(4):
+        for bit in range(4):
+            offset0 = col*16 + 0 + bit
+            offset1 = col*16 + 4 + bit
+            offset2 = col*16 + 8 + bit
+            offset3 = col*16 + 12 + bit
+
+            stp_file.write(f"ASSERT(BVXOR(BVXOR({mc}[{offset1}:{offset1}], {mc}[{offset2}:{offset2}]), {mc}[{offset3}:{offset3}]) = {sb_out}[{offset0}:{offset0}]);\n")
+            stp_file.write(f"ASSERT(BVXOR(BVXOR({mc}[{offset0}:{offset0}], {mc}[{offset2}:{offset2}]), {mc}[{offset3}:{offset3}]) = {sb_out}[{offset1}:{offset1}]);\n")
+            stp_file.write(f"ASSERT(BVXOR(BVXOR({mc}[{offset0}:{offset0}], {mc}[{offset1}:{offset1}]), {mc}[{offset3}:{offset3}]) = {sb_out}[{offset2}:{offset2}]);\n")
+            stp_file.write(f"ASSERT(BVXOR(BVXOR({mc}[{offset0}:{offset0}], {mc}[{offset1}:{offset1}]), {mc}[{offset2}:{offset2}]) = {sb_out}[{offset3}:{offset3}]);\n")
+
+def add_speckey_round(stp_file: TextIO, x_in: str, y_in: str, x_out: str, y_out: str, w: str, wordsize: int):
+    """
+    SpecKey round used in Sparx (similar to Speck but different constants).
+    """
+    from parser.stpcommands import getStringRightRotate as rotr
+    from parser.stpcommands import getStringLeftRotate as rotl
+    
+    # x_out = (x_in >>> 7) + y_in
+    stp_file.write(f"ASSERT({stpcommands.getStringAdd(rotr(x_in, 7, wordsize), y_in, x_out, wordsize)});\n")
+    # y_out = x_out xor (y_in <<< 2)
+    stp_file.write(f"ASSERT({y_out} = BVXOR({x_out}, {rotl(y_in, 2, wordsize)}));\n")
+    # Weight
+    stp_file.write(f"ASSERT({w} = ~")
+    stp_file.write(stpcommands.getStringEq(rotr(x_in, 7, wordsize), y_in, x_out))
+    stp_file.write(");\n")
+
+def add_sparx_l_box(stp_file: TextIO, x_in: str, y_in: str, x_out: str, y_out: str, wordsize: int):
+    """
+    Linear L-box for Sparx.
+    """
+    from parser.stpcommands import getStringLeftRotate as rotl
+    xor_x_y = f"BVXOR({x_in}, {y_in})"
+    rot_x_y = rotl(xor_x_y, 8, wordsize)
+    stp_file.write(f"ASSERT({x_out} = BVXOR({x_in}, {rot_x_y}));\n")
+    stp_file.write(f"ASSERT({y_out} = BVXOR({y_in}, {rot_x_y}));\n")
+
 def add_assignment(stp_file: TextIO, out: str, in_var: str):
     """
     Adds a simple assignment/equality constraint.

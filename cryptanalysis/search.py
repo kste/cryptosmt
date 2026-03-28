@@ -39,6 +39,10 @@ def _run_with_reporter(strategy_class, cipher, parameters):
         except Exception as e:
             result_container["error"] = e
 
+    if not parameters.get("is_interactive"):
+        # Fallback for non-interactive: simple run
+        return strategy.run()
+
     t = threading.Thread(target=search_thread)
     t.start()
 

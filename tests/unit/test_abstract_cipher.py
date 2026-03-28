@@ -36,3 +36,22 @@ def test_abstract_cipher_common_constraints():
     val = out.getvalue()
     assert "ASSERT(NOT(x0 = 0bin0000000000000000));" in val
     assert "ASSERT(x0 = 0x1);" in val
+
+def test_abstract_cipher_blocking():
+    cipher = MockCipher()
+    cipher.state_variables = ["x0"]
+    
+    class MockChar:
+        def __init__(self, data): self.characteristic_data = data
+        
+    params = {
+        "rounds": 1, 
+        "wordsize": 16, 
+        "blockedCharacteristics": [MockChar({"x0": "0x1234"})]
+    }
+    
+    out = StringIO()
+    cipher.apply_common_constraints(out, params)
+    val = out.getvalue()
+    assert "BVXOR(x0, 0x1234)" in val
+    assert "ASSERT(NOT(" in val

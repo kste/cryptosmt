@@ -83,6 +83,8 @@ class ProbabilityStrategy(SearchStrategy):
 
     def _print_summary(self, weight_results, found, prob):
         if prob > 0:
+            # Print summary table only if interactive?
+            # For now just use logger.info for the final expected lines
             logger.info("\n" + "="*30)
             logger.info(f"{'Weight':<10} | {'Trails Found':<15}")
             logger.info("-" * 30)

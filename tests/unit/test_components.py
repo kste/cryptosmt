@@ -36,3 +36,12 @@ def test_add_4bit_sbox_at_pos():
     assert "Y[0:0]" in val
     assert "W[1:1]" in val
     assert "ASSERT" in val
+
+def test_add_midori_mix_columns():
+    out = StringIO()
+    components.add_midori_mix_columns(out, "MC", "SB_OUT")
+    val = out.getvalue()
+    # Check for correct nesting of BVXOR (max 2 arguments per BVXOR in our implementation)
+    assert "BVXOR(BVXOR(" in val
+    assert "SB_OUT[0:0]" in val
+    assert "ASSERT" in val

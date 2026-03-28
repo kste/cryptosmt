@@ -47,6 +47,7 @@ class ToolParameters:
     verbose: bool = False
     quiet: bool = False
     list_ciphers: bool = False
+    is_interactive: bool = True
 
 
 def startsearch(params: ToolParameters):
@@ -74,7 +75,7 @@ def startsearch(params: ToolParameters):
     if params.rotationconstants is None:
         del params_dict["rotationconstants"]
     
-    # Remove CLI-only fields
+    # Remove CLI-only fields that shouldn't be passed to ciphers
     for field_name in ["verbose", "quiet", "list_ciphers"]:
         if field_name in params_dict:
             del params_dict[field_name]
@@ -209,6 +210,9 @@ def loadparameters(args) -> ToolParameters:
     if args.list_ciphers:
         params.list_ciphers = args.list_ciphers
 
+    import sys
+    params.is_interactive = sys.stdout.isatty()
+
     return params
 
 
@@ -282,9 +286,12 @@ def main():
     elif args.quiet:
         log_level = logging.WARNING
 
-    from rich.logging import RichHandler
-    logging.basicConfig(level=log_level, format="%(message)s", 
-                        datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)])
+    if params.is_interactive:
+        from rich.logging import RichHandler
+        logging.basicConfig(level=log_level, format="%(message)s", 
+                            datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)])
+    else:
+        logging.basicConfig(level=log_level, format='INFO: %(message)s')
 
     # Check if enviroment is setup correctly.
     checkenviroment()

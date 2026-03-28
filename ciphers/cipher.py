@@ -122,7 +122,7 @@ class AbstractCipher(object, metaclass=ABCMeta):
 
         # Blocked characteristics
         for char in parameters.get("blockedCharacteristics", []):
-            stpcommands.blockCharacteristic(stp_file, char, size)
+            stpcommands.blockCharacteristic(stp_file, char, size, ignore_msbs=parameters.get("ignore_msbs", 0))
 
     def apply_iterative_constraints(self, stp_file, parameters):
         """

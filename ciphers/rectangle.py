@@ -6,6 +6,7 @@ Created on Sep 11, 2017
 
 from parser import stpcommands
 from ciphers.cipher import AbstractCipher
+from ciphers import components
 
 
 class RectangleCipher(AbstractCipher):
@@ -24,95 +25,51 @@ class RectangleCipher(AbstractCipher):
         """
         return ['SC', 'SR', 'w']
 
-    def createSTP(self, stp_filename, parameters):
+    def setup_variables(self, stp_file, parameters):
         """
-        Creates an STP file to find a characteristic for RECTANGLE with
-        the given parameters.
+        Declare variables for RECTANGLE.
         """
-
         blocksize = parameters["blocksize"]
-        wordsize = parameters["wordsize"]
         rounds = parameters["rounds"]
-        weight = parameters["sweight"]
+        
+        self.sc = self.declare_variable_vector(stp_file, "SC", rounds, blocksize, is_state=True)
+        self.sr = self.declare_variable_vector_per_round(stp_file, "SR", rounds, blocksize)
+        self.w = self.declare_variable_vector_per_round(stp_file, "w", rounds, blocksize, is_weight=True)
 
-        with open(stp_filename, 'w') as stp_file:
-            header = ("% Input File for STP\n% Rectangle w={}"
-                      "rounds={}\n\n\n".format(blocksize, rounds))
-            stp_file.write(header)
-
-            # Setup variables
-            sc = ["SC{}".format(i) for i in range(rounds + 1)]
-            sr = ["SR{}".format(i) for i in range(rounds)]
-
-            # w = weight
-            w = ["w{}".format(i) for i in range(rounds)]
-
-            stpcommands.setupVariables(stp_file, sc, blocksize)
-            stpcommands.setupVariables(stp_file, sr, blocksize)
-            stpcommands.setupVariables(stp_file, w, blocksize)
-
-            stpcommands.setupWeightComputation(stp_file, weight, w, blocksize)
-
-            for i in range(rounds):
-                self.setupRectangleRound(stp_file, sc[i], sr[i], sc[i+1], 
-                                      w[i], blocksize)
-
-            # No all zero characteristic
-            stpcommands.assertNonZero(stp_file, sc, blocksize)
-
-            # Iterative characteristics only
-            # Input difference = Output difference
-            if parameters["iterative"]:
-                stpcommands.assertVariableValue(stp_file, sc[0], sc[rounds])
-
-            for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
-
-            for char in parameters["blockedCharacteristics"]:
-                stpcommands.blockCharacteristic(stp_file, char, blocksize)
-
-            stpcommands.setupQuery(stp_file)
-
-        return
-
-    def setupRectangleRound(self, stp_file, sc_in, sr, sc_out, w, blocksize):
+    def apply_round_constraints(self, stp_file, round_nr, parameters):
         """
-        Model for differential behaviour of one round Rectangle
+        Apply RECTANGLE round constraints.
         """
-        command = ""
+        blocksize = parameters["blocksize"]
+        sc_in = self.sc[round_nr]
+        sr = self.sr[round_nr]
+        sc_out = self.sc[round_nr+1]
+        w = self.w[round_nr]
 
         #SubColumn
         rectangle_sbox = [0x6, 0x5, 0xC, 0xA, 0x1, 0xE, 0x7, 0x9, 0xB, 0x0, 0x3, 0xD, 0x8, 0xF, 0x4, 0x2]
         for i in range(16):
-            variables = ["{0}[{1}:{1}]".format(sc_in, i + 48),
-                         "{0}[{1}:{1}]".format(sc_in, i + 32),
-                         "{0}[{1}:{1}]".format(sc_in, i + 16),
-                         "{0}[{1}:{1}]".format(sc_in, i + 0),
-                         "{0}[{1}:{1}]".format(sr, i + 48),
-                         "{0}[{1}:{1}]".format(sr, i + 32),
-                         "{0}[{1}:{1}]".format(sr, i + 16),
-                         "{0}[{1}:{1}]".format(sr, i + 0),
-                         "{0}[{1}:{1}]".format(w, i + 48),
-                         "{0}[{1}:{1}]".format(w, i + 32),
-                         "{0}[{1}:{1}]".format(w, i + 16),
-                         "{0}[{1}:{1}]".format(w, i + 0)]
-            command += stpcommands.add4bitSbox(rectangle_sbox, variables)
+            components.add_rectangle_sbox(stp_file, rectangle_sbox, i, sc_in, sr, w)
 
         #ShiftRows
         # row 0 <<< 0
-        command += "ASSERT({0}[15:0] = {1}[15:0]);\n".format(sr, sc_out)
+        components.add_assignment(stp_file, f"{sc_out}[15:0]", f"{sr}[15:0]")
 
         # row 1 <<< 1
-        command += "ASSERT({0}[30:16] = {1}[31:17]);\n".format(sr, sc_out)
-        command += "ASSERT({0}[31:31] = {1}[16:16]);\n".format(sr, sc_out)
+        components.add_assignment(stp_file, f"{sc_out}[31:17]", f"{sr}[30:16]")
+        components.add_assignment(stp_file, f"{sc_out}[16:16]", f"{sr}[31:31]")
 
         # row 2 <<< 12
-        command += "ASSERT({0}[47:36] = {1}[43:32]);\n".format(sr, sc_out)
-        command += "ASSERT({0}[35:32] = {1}[47:44]);\n".format(sr, sc_out)
+        components.add_assignment(stp_file, f"{sc_out}[43:32]", f"{sr}[47:36]")
+        components.add_assignment(stp_file, f"{sc_out}[47:44]", f"{sr}[35:32]")
 
         # row 3 <<< 13
-        command += "ASSERT({0}[50:48] = {1}[63:61]);\n".format(sr, sc_out)
-        command += "ASSERT({0}[63:51] = {1}[60:48]);\n".format(sr, sc_out)
+        components.add_assignment(stp_file, f"{sc_out}[63:61]", f"{sr}[50:48]")
+        components.add_assignment(stp_file, f"{sc_out}[60:48]", f"{sr}[63:51]")
 
-        stp_file.write(command)
-        return
+    def apply_iterative_constraints(self, stp_file, parameters):
+        """
+        Iterative constraint for RECTANGLE.
+        """
+        rounds = parameters["rounds"]
+        stpcommands.assertVariableValue(stp_file, self.sc[0], self.sc[rounds])

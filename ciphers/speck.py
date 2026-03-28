@@ -33,19 +33,25 @@ class SpeckCipher(AbstractCipher):
         """
         if "wordsize" not in parameters:
             parameters["wordsize"] = 16
+            
+        wordsize = parameters["wordsize"]
+        if wordsize == 16:
+            self.rot_alpha = 7
+            self.rot_beta = 2
+        else:
+            # Standard for 24, 32, 48, 64
+            self.rot_alpha = 8
+            self.rot_beta = 3
 
     def write_header(self, stp_file, parameters):
         """
         Custom header for Speck.
         """
-        wordsize = parameters["wordsize"]
-        if wordsize == 16:
-            self.rot_alpha = 7
-            self.rot_beta = 2
-        elif "rotationconstants" in parameters and parameters["rotationconstants"]:
+        if "rotationconstants" in parameters and parameters["rotationconstants"]:
             self.rot_alpha = parameters["rotationconstants"][0]
             self.rot_beta = parameters["rotationconstants"][1]
 
+        wordsize = parameters["wordsize"]
         header = ("% Input File for STP\n% Speck w={} alpha={} beta={} "
                   "rounds={}\n\n\n".format(wordsize, self.rot_alpha,
                                            self.rot_beta, parameters["rounds"]))

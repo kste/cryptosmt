@@ -8,21 +8,36 @@ Provides functions for constructing the input file for STP.
 import itertools
 from typing import List, Dict, TextIO, Any
 
-def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> None:
+def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int, ignore_msbs: int = 0) -> None:
     """
     Adds an constraint to the stp stpfile that blocks the given characteristic.
     Optimized to use fewer bitwise ORs.
     """
     char_vars = []
-    # State variables usually don't start with w (weight) or tmp or sout/fout
-    # We want to block based on the main state variables (x, y, S, X etc)
+    # We want to block based on the state variables.
+    # We exclude weight variables (usually start with 'w')
     for var, value in characteristic.characteristic_data.items():
-        # Exclude weight variables and intermediate variables
-        if var.startswith(('w', 'tmp', 'andout', 'sout', 'fout', 'X1_')): 
+        if var.startswith('w'): 
             continue
         if value == "none": 
             continue
-        char_vars.append(f"BVXOR({var}, {value})")
+        
+        if ignore_msbs > 0 and wordsize > ignore_msbs:
+            # Block only non-ignored bits
+            new_bits = wordsize - ignore_msbs
+            mask = (1 << new_bits) - 1
+            try:
+                val_int = int(value.replace("0x", "").replace("#x", ""), 16)
+                masked_val = val_int & mask
+                # hex_val must have exact bit width for the XOR to work if we used slices
+                # STP usually expects bitwidth to match. 
+                # If we use var[14:0] it's 15 bits. 0x0000 might be seen as 16 bits.
+                bin_val = f"0bin{masked_val:0{new_bits}b}"
+                char_vars.append(f"BVXOR({var}[{new_bits-1}:0], {bin_val})")
+            except ValueError:
+                char_vars.append(f"BVXOR({var}, {value})")
+        else:
+            char_vars.append(f"BVXOR({var}, {value})")
 
     if char_vars:
         # Group variables to reduce the depth of the OR tree
@@ -35,7 +50,8 @@ def blockCharacteristic(stpfile: TextIO, characteristic: Any, wordsize: int) -> 
                     new_vars.append(char_vars[i])
             char_vars = new_vars
             
-        stpfile.write(f"ASSERT(NOT({char_vars[0]} = 0bin{'0' * wordsize}));\n")
+        final_bits = wordsize - ignore_msbs
+        stpfile.write(f"ASSERT(NOT({char_vars[0]} = 0bin{'0' * final_bits}));\n")
     return
 
 

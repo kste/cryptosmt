@@ -8,6 +8,10 @@ def run_cryptosmt():
     Fixture to run cryptosmt.py with the given arguments.
     """
     def _run(args):
+        # Force plain text output for tests by setting TERM=dumb
+        env = os.environ.copy()
+        env["TERM"] = "dumb"
+        
         cmd = ["python3", "cryptosmt.py"] + args
         
         # Prefer faster solvers if not explicitly specified
@@ -18,7 +22,7 @@ def run_cryptosmt():
             elif os.path.exists(PATH_BOOLECTOR):
                 cmd.append("--boolector")
         
-        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(cmd, capture_output=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
         return result
     return _run
 
