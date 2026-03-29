@@ -8,7 +8,7 @@
 
 *   **Optimal Trail Discovery**: Automatically find the best linear and differential characteristics for a wide range of ciphers.
 *   **Probability Estimation**: Accurately compute the probability of complex differentials using exact or approximate model counting.
-*   **High-Performance Engine**: Built-in support for high-performance solvers like **Bitwuzla**, **Boolector**, and **STP**.
+*   **High-Performance Engine**: Built-in support for high-performance solvers like **Bitwuzla**, **CVC5**, **Boolector**, and **STP**.
 *   **Parallel Search**: Fully parallelized execution engine to utilize all available CPU cores.
 *   **Extensible Architecture**: Modular design based on an automated `AbstractCipher` framework, making it easy to add support for new primitives.
 ---
@@ -31,7 +31,7 @@ CryptoSMT includes models for a broad suite of modern cryptographic designs:
 
 ### Installation via Docker (Recommended)
 
-The easiest way to deploy CryptoSMT with all high-performance solvers (STP, Bitwuzla, Boolector, ApproxMC) is using Docker:
+The easiest way to deploy CryptoSMT with all high-performance solvers (STP, Bitwuzla, CVC5, Boolector, ApproxMC) is using Docker:
 
 ```bash
 # Build the comprehensive cryptanalysis image
@@ -72,12 +72,13 @@ python3 cryptosmt.py --inputfile examples/simon/simon32_13rounds_diff.yaml --thr
 ## 🔬 Advanced Features
 
 ### Solvers
-CryptoSMT supports multiple backend solvers. While **STP** is the default, **Bitwuzla** generally provides the best performance for modern cryptanalysis.
+CryptoSMT supports multiple backend solvers. While **STP** is the default, **Bitwuzla** or **CVC5** generally provide the best performance for modern cryptanalysis.
 
 ### Supported Solvers:
 *   **STP (Default):** The original solver integrated in CryptoSMT.
 *   **Boolector:** Optimized for bit-vector problems. Use with `--boolector`.
 *   **Bitwuzla:** The high-performance successor to Boolector. Use with `--bitwuzla`.
+*   **CVC5:** A high-performance SMT solver. Use with `--cvc5`.
 *   **ApproxMC:** Provides approximate model counting for massive solution spaces in **Mode 4**. Use with `--approxmc`.
 
 ### Exact vs. Approximate Counting
@@ -138,7 +139,7 @@ docker run --rm -it cryptosmt --cipher simon --rounds 12
 
 ## 🚀 Solver Benchmark Tool
 
-CryptoSMT includes a high-performance benchmarking tool to compare the efficiency of different SMT solvers (`STP`, `Bitwuzla`, `Boolector`) across various cryptographic primitives.
+CryptoSMT includes a high-performance benchmarking tool to compare the efficiency of different SMT solvers (`STP`, `Bitwuzla`, `CVC5`, `Boolector`) across various cryptographic primitives.
 
 To run the interactive benchmark dashboard:
 ```bash

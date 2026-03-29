@@ -14,16 +14,24 @@ from rich.panel import Panel
 from rich.layout import Layout
 from rich.console import Group
 from rich import box
+import shutil
+from typing import Dict, List, Any
 
 def get_solver_version(path: str, args: List[str] = ["--version"]) -> str:
+    # If path is just a command name, find it in system PATH
+    actual_path = path
     if not os.path.exists(path):
-        return "Not found"
+        actual_path = shutil.which(path)
+        if not actual_path:
+            return "Not found"
+
     try:
-        result = subprocess.run([path] + args, capture_output=True, text=True, timeout=5)
+        result = subprocess.run([actual_path] + args, capture_output=True, text=True, timeout=5)
         out = result.stdout.strip() or result.stderr.strip()
         return out.split("\n")[0]
     except Exception:
         return "Unknown Version"
+
 
 def run_benchmark_task(task_id, name, rounds, wordsize, solver, extra_args):
     cmd = ["python3", "cryptosmt.py", "--cipher", name, "--rounds", str(rounds), 
@@ -31,6 +39,7 @@ def run_benchmark_task(task_id, name, rounds, wordsize, solver, extra_args):
     
     if solver == "Bitwuzla": cmd.append("--bitwuzla")
     elif solver == "Boolector": cmd.append("--boolector")
+    elif solver == "CVC5": cmd.append("--cvc5")
     elif solver == "STP": cmd.append("--stp")
     
     start = time.time()
@@ -44,16 +53,17 @@ def run_benchmark_task(task_id, name, rounds, wordsize, solver, extra_args):
         return (task_id, f"ERROR: {e}")
 
 def run_parallel_benchmark(json_output: str = None):
-    from config import PATH_STP, PATH_BITWUZLA, PATH_BOOLECTOR
+    from config import PATH_STP, PATH_BITWUZLA, PATH_BOOLECTOR, PATH_CVC5
     console = Console()
     
     solvers = {
-        "STP": PATH_STP,
+        "CVC5": PATH_CVC5,
         "Bitwuzla": PATH_BITWUZLA,
-        "Boolector": PATH_BOOLECTOR
+        "Boolector": PATH_BOOLECTOR,
+        "STP": PATH_STP
     }
     
-    available_solvers = [name for name, path in solvers.items() if os.path.exists(path)]
+    available_solvers = [name for name, path in solvers.items() if os.path.exists(path) or shutil.which(path)]
     versions = {name: get_solver_version(solvers[name]) for name in available_solvers}
     
     ciphers = [

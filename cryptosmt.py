@@ -7,7 +7,7 @@ Created on Mar 28, 2014
 # Structured configuration refactoring
 from cryptanalysis import search
 import ciphers
-from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR, PATH_BITWUZLA
+from config import PATH_STP, PATH_CRYPTOMINISAT, PATH_BOOLECTOR, PATH_BITWUZLA, PATH_CVC5
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from dataclasses import dataclass, field, asdict
@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Any
 
 import yaml
 import os
+import shutil
 import logging
 
 logger = logging.getLogger("cryptosmt")
@@ -35,6 +36,7 @@ class ToolParameters:
     iterative: bool = False
     boolector: bool = False
     bitwuzla: bool = False
+    cvc5: bool = False
     stp: bool = False
     approxmc: bool = False
     weightencoding: str = "bvplus"
@@ -123,6 +125,11 @@ def checkenviroment():
     if not os.path.exists(PATH_BITWUZLA):
         logger.warning(f"Could not find BITWUZLA binary at {PATH_BITWUZLA}, \"--bitwuzla\" option not available.")
 
+    if not os.path.exists(PATH_CVC5):
+        # cvc5 might be in PATH, so we only warn if it's not in PATH either
+        if shutil.which(PATH_CVC5) is None:
+            logger.warning(f"Could not find CVC5 binary at {PATH_CVC5}, \"--cvc5\" option not available.")
+
     return
 
 
@@ -194,6 +201,9 @@ def loadparameters(args) -> ToolParameters:
 
     if args.bitwuzla:
         params.bitwuzla = args.bitwuzla
+
+    if args.cvc5:
+        params.cvc5 = args.cvc5
 
     if args.stp:
         params.stp = args.stp
@@ -274,6 +284,8 @@ def main():
                         help="Use boolector to find solutions")
     parser.add_argument('--bitwuzla', action="store_true",
                         help="Use bitwuzla to find solutions")
+    parser.add_argument('--cvc5', action="store_true",
+                        help="Use cvc5 to find solutions")
     parser.add_argument('--stp', action="store_true",
                         help="Use STP to find solutions (default)")
     parser.add_argument('--approxmc', action="store_true",

@@ -45,6 +45,7 @@ class SearchReporter:
         solver_name = "STP"
         if self.parameters.get("bitwuzla"): solver_name = "Bitwuzla"
         elif self.parameters.get("boolector"): solver_name = "Boolector"
+        elif self.parameters.get("cvc5"): solver_name = "CVC5"
         
         grid.add_row(
             f"[bold blue]Cipher:[/bold blue] {self.parameters.get('cipher')} | "

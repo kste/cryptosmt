@@ -13,6 +13,10 @@ def test_get_solver_factory():
     solver = solvers.get_solver(params)
     assert isinstance(solver, solvers.bitwuzla.BitwuzlaSolver)
     
+    params = {"cvc5": True}
+    solver = solvers.get_solver(params)
+    assert isinstance(solver, solvers.cvc5.CVC5Solver)
+    
     params = {"boolector": True}
     solver = solvers.get_solver(params)
     assert isinstance(solver, solvers.boolector.BoolectorSolver)

@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     cryptominisat \
     boolector \
+    cvc5 \
     meson \
     ninja-build \
     unzip
@@ -82,6 +83,7 @@ RUN sed -i 's|PATH_STP = .*|PATH_STP = "/usr/local/bin/stp"|' config.py && \
     sed -i 's|PATH_CRYPTOMINISAT = .*|PATH_CRYPTOMINISAT = "/usr/bin/cryptominisat5"|' config.py && \
     sed -i 's|PATH_BOOLECTOR = .*|PATH_BOOLECTOR = "/usr/bin/boolector"|' config.py && \
     sed -i 's|PATH_BITWUZLA = .*|PATH_BITWUZLA = "/usr/local/bin/bitwuzla"|' config.py && \
+    sed -i 's|PATH_CVC5 = .*|PATH_CVC5 = "/usr/bin/cvc5"|' config.py && \
     sed -i 's|PATH_APPROXMC = .*|PATH_APPROXMC = "/usr/local/bin/approxmc"|' config.py
 
 ENTRYPOINT ["python3", "cryptosmt.py"]
