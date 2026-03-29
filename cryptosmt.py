@@ -28,6 +28,8 @@ class ToolParameters:
     blocksize: int = 64
     tweaksize: Optional[int] = None
     keysize: Optional[int] = None
+    capacity: Optional[int] = None
+    rate: Optional[int] = None
     sweight: int = 0
     endweight: int = 1000
     iterative: bool = False
@@ -75,6 +77,12 @@ def startsearch(params: ToolParameters):
     if params.rotationconstants is None:
         del params_dict["rotationconstants"]
     
+    if params.capacity is None:
+        del params_dict["capacity"]
+
+    if params.rate is None:
+        del params_dict["rate"]
+
     # Remove CLI-only fields that shouldn't be passed to ciphers
     for field_name in ["verbose", "quiet", "list_ciphers"]:
         if field_name in params_dict:
@@ -134,11 +142,18 @@ def loadparameters(args) -> ToolParameters:
                 if hasattr(params, key):
                     if key == "fixedVariables":
                         fixed_vars = {}
-                        for variable in value:
-                            fixed_vars.update(variable)
+                        if isinstance(value, list):
+                            for variable in value:
+                                fixed_vars.update(variable)
+                        elif isinstance(value, dict):
+                            fixed_vars = value
                         params.fixedVariables = fixed_vars
                     else:
                         setattr(params, key, value)
+                else:
+                    # Allow passing unknown parameters to ciphers (like capacity/rate if they weren't in dataclass)
+                    # but now we added them to dataclass.
+                    pass
 
     # Override parameters if they are set on commandline
     if args.cipher is not None:

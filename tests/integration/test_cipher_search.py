@@ -49,6 +49,9 @@ def get_available_solvers():
     ("salsa", 1, 32, 0, 0, []),
     ("gimli", 2, 32, 0, 0, []),
     ("siphash", 1, 64, 25, 0, ["--nummessages", "1"]),
+    # Keccak with capacity 0 (via input file)
+    ("keccakdiff", 1, 8, 2, 0, ["--inputfile", "tests/integration/examples/keccak_cap0_1round.yaml"]),
+    ("keccakdiff", 2, 8, 8, 0, ["--inputfile", "tests/integration/examples/keccak_cap0_2rounds.yaml"]),
 ])
 def test_cipher_find_min_weight(run_cryptosmt, cipher, rounds, wordsize, expected_weight, sweight, extra_args):
     """

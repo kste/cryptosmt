@@ -40,14 +40,14 @@ class KeccakDiffCipher(AbstractCipher):
                 's03', 's13', 's23', 's33', 's43',
                 's04', 's14', 's24', 's34', 's44', "w"]
 
-    def createSTP(self, stp_filename, parameters):
+    def write_header(self, stp_file, parameters):
         """
-        Creates an STP file for Keccak.
+        Custom header for Keccak.
         """
         wordsize = parameters["wordsize"]
         rounds = parameters["rounds"]
-        weight = parameters["sweight"]
-
+        
+        # Default rate and capacity
         capacity = 160
         rate = (wordsize * 25) - capacity
 
@@ -57,69 +57,85 @@ class KeccakDiffCipher(AbstractCipher):
         if "capacity" in parameters:
             capacity = parameters["capacity"]
 
-        assert (rate + capacity) == wordsize * 25
+        header = ("% Input File for STP\n% Keccak w={} rate={} "
+                  "capacity={}\n\n\n".format(wordsize, rate, capacity,
+                                              rounds))
+        stp_file.write(header)
+
+    def setup_variables(self, stp_file, parameters):
+        """
+        Declare variables in the STP file.
+        """
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
         
-        with open(stp_filename, 'w') as stp_file:
-            stp_file.write("% Input File for STP\n% Keccak w={} rate={} "
-                           "capacity={}\n\n\n".format(wordsize, rate, capacity,
-                                                      rounds))
-
-            # Setup variables
-            # 5x5 lanes of wordsize
-            s = ["s{}{}{}".format(x, y, i) for i in range(rounds+1)
+        self.s = ["s{}{}{}".format(x, y, i) for i in range(rounds+1)
                  for y in range(5) for x in range(5)]
 
-            b = ["b{}{}{}".format(x, y, i) for i in range(rounds)
+        self.b = ["b{}{}{}".format(x, y, i) for i in range(rounds)
                  for y in range(5) for x in range(5)]
-            c = ["c{}{}".format(x, i) for i in range(rounds) for x in range(5)]
-            d = ["d{}{}".format(x, i) for i in range(rounds) for x in range(5)]
-            xin = ["xin{}{}{}".format(y, z, i) for i in range(rounds)
+        self.c = ["c{}{}".format(x, i) for i in range(rounds) for x in range(5)]
+        self.d = ["d{}{}".format(x, i) for i in range(rounds) for x in range(5)]
+        self.xin = ["xin{}{}{}".format(y, z, i) for i in range(rounds)
                    for y in range(5) for z in range (wordsize)]
-            xout = ["xout{}{}{}".format(y, z, i) for i in range(rounds)
+        self.xout = ["xout{}{}{}".format(y, z, i) for i in range(rounds)
                     for y in range(5) for z in range (wordsize)]
-            andOut = ["andOut{}{}{}".format(y, z, i) for i in range(rounds)
+        self.andOut = ["andOut{}{}{}".format(y, z, i) for i in range(rounds)
                       for y in range(5) for z in range (wordsize)]
 
-	        # w = weight
-            w = ["w{}".format(i) for i in range(rounds)]
-            tmp = ["tmp{}{}{}".format(y, z, i) for i in range(rounds) 
+        self.w = ["w{}".format(i) for i in range(rounds)]
+        self.tmp = ["tmp{}{}{}".format(y, z, i) for i in range(rounds) 
                    for y in range(5) for z in range (wordsize)]
-            stpcommands.setupVariables(stp_file, s, wordsize)
-            stpcommands.setupVariables(stp_file, b, wordsize)
-            stpcommands.setupVariables(stp_file, c, wordsize)
-            stpcommands.setupVariables(stp_file, d, wordsize)
-            stpcommands.setupVariables(stp_file, w, 16)
-            stpcommands.setupVariables(stp_file, tmp, 5)
-            stpcommands.setupWeightComputationSum(stp_file, weight, w, wordsize)
-            stpcommands.setupVariables(stp_file, xin, 5)
-            stpcommands.setupVariables(stp_file, xout, 5)
-            stpcommands.setupVariables(stp_file, andOut, 5)
+        
+        stpcommands.setupVariables(stp_file, self.s, wordsize)
+        stpcommands.setupVariables(stp_file, self.b, wordsize)
+        stpcommands.setupVariables(stp_file, self.c, wordsize)
+        stpcommands.setupVariables(stp_file, self.d, wordsize)
+        stpcommands.setupVariables(stp_file, self.w, 16)
+        stpcommands.setupVariables(stp_file, self.tmp, 5)
+        
+        weight = parameters["sweight"]
+        stpcommands.setupWeightComputationSum(stp_file, weight, self.w, wordsize)
+        
+        stpcommands.setupVariables(stp_file, self.xin, 5)
+        stpcommands.setupVariables(stp_file, self.xout, 5)
+        stpcommands.setupVariables(stp_file, self.andOut, 5)
 
-            # No all zero characteristic
-            stpcommands.assertNonZero(stp_file, s, wordsize)
+    def apply_constraints(self, stp_file, parameters):
+        """
+        Apply Keccak-specific constraints.
+        """
+        wordsize = parameters["wordsize"]
+        rounds = parameters["rounds"]
+        
+        capacity = parameters.get("capacity", 160)
+        rate = (wordsize * 25) - capacity
+        if "rate" in parameters:
+            rate = parameters["rate"]
 
-            # Fix variables for capacity, only works if rate/capacity is
-            # multiple of wordsize.
-            for i in range(rate // wordsize, (rate + capacity) // wordsize):
-               stpcommands.assertVariableValue(stp_file, s[i],
-                                               "0hex{}".format("0"*(wordsize // 4)))
+        # No all zero characteristic
+        stpcommands.assertNonZero(stp_file, self.s, wordsize)
 
-            for rnd in range(rounds):
-                self.setupKeccakRound(stp_file, rnd, s, b, c, d, wordsize, 
-                                      tmp, w, xin, xout, andOut)
+        # Fix variables for capacity, only works if rate/capacity is
+        # multiple of wordsize.
+        for i in range(rate // wordsize, (rate + capacity) // wordsize):
+           stpcommands.assertVariableValue(stp_file, self.s[i],
+                                           "0hex{}".format("0"*(wordsize // 4)))
 
-            for key, value in parameters["fixedVariables"].items():
-                stpcommands.assertVariableValue(stp_file, key, value)
+        # Standard round loop
+        for i in range(rounds):
+            self.apply_round_constraints(stp_file, i, parameters)
 
-            stpcommands.setupQuery(stp_file)
-
-        return
-
-    def setupKeccakRound(self, stp_file, rnd, s, b, c, d, wordsize, tmp,
-                         w, xin, xout, andOut):
+    def apply_round_constraints(self, stp_file, round_nr, parameters):
         """
         Model for one round of Keccak.
         """
+        wordsize = parameters["wordsize"]
+        rnd = round_nr
+        s, b, c, d = self.s, self.b, self.c, self.d
+        tmp, w = self.tmp, self.w
+        xin, xout, andOut = self.xin, self.xout, self.andOut
+        
         command = ""
 
         # Linear functions

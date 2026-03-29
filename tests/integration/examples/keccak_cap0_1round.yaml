@@ -1,0 +1,7 @@
+cipher: keccakdiff
+rounds: 1
+wordsize: 8
+sweight: 0
+endweight: 10
+capacity: 0
+rate: 200
