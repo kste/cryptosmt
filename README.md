@@ -118,15 +118,41 @@ python3 cryptosmt.py --cipher present --rounds 8 --wordsize 64 --weightencoding 
 
 ---
 
-## 📊 Benchmarks (SIMON-32/64, 10 rounds)
+## 🛡️ Search Dashboard & Reporting
 
-The following table compares the performance (on a Macbook Pro M5) of the three solvers when searching for the minimum weight characteristic for 10 rounds of SIMON-32/64:
+CryptoSMT features a modern, interactive terminal dashboard (powered by `rich`) that provides real-time observability into long-running searches.
 
-| Solver | Weight Found | Time Taken | Performance vs STP |
-| :--- | :---: | :---: | :---: |
-| **STP (Default)** | 25 | **281.95s** (~4.7 min) | Baseline |
-| **Boolector** | 25 | **25.55s** | ~11x faster |
-| **Bitwuzla** | 25 | **10.69s** | **~26x faster** |
+### Live Dashboard
+When running in an interactive terminal, the tool displays:
+*   **Header**: Real-time configuration (cipher, rounds, mode, threads).
+*   **Progress**: Live bar tracking the current weight being searched.
+*   **Optimal Trail**: A beautifully formatted, color-coded round-by-round table of the best characteristic found so far.
+*   **Statistics**: Live counter for total trails found and elapsed time.
+
+To enable the rich dashboard, ensure you allocate a TTY (use `-it` with Docker):
+```bash
+docker run --rm -it cryptosmt --cipher simon --rounds 12
+```
+
+---
+
+## 🚀 Solver Benchmark Tool
+
+CryptoSMT includes a high-performance benchmarking tool to compare the efficiency of different SMT solvers (`STP`, `Bitwuzla`, `Boolector`) across various cryptographic primitives.
+
+To run the interactive benchmark dashboard:
+```bash
+docker run --rm -it --entrypoint python3 cryptosmt benchmark_solvers.py
+```
+
+### Key Features:
+*   **Live Performance Tracking**: Real-time status of all cipher/solver combinations.
+*   **Relative Efficiency**: Automatically identifies the fastest solver for each cipher and displays the speedup factor (e.g., `1.00x` for the winner).
+*   **Static Version Info**: Persistent display of exact solver versions used.
+*   **JSON Export**: Save structured benchmark data for further analysis:
+    ```bash
+    docker run --rm -it --entrypoint python3 cryptosmt benchmark_solvers.py --json results.json
+    ```
 
 ---
 
