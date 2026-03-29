@@ -151,7 +151,7 @@ docker run --rm -it --entrypoint python3 cryptosmt benchmark_solvers.py
 *   **Static Version Info**: Persistent display of exact solver versions used.
 *   **JSON Export**: Save structured benchmark data for further analysis:
     ```bash
-    docker run --rm -it --entrypoint python3 cryptosmt benchmark_solvers.py --json results.json
+    docker run --rm -it --entrypoint python3 cryptosmt benchmark_solvers.py
     ```
 
 ---
