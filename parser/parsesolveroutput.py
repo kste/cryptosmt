@@ -112,7 +112,7 @@ def getCharSTPOutput(output, cipher, rounds):
         if re.match(r'ASSERT.*weight', row):
             weight = re.search(r'(?<=ASSERT\( weight = ).*(?= \);)', row).group(0)
         elif re.match(r'ASSERT\(.*\)', row):
-            tmp = re.search(r'ASSERT\( ([a-z0-9A-Z]+) = ([a-z0-9A-Z]+)', row)
+            tmp = re.search(r'ASSERT\( ([a-z0-9A-Z_]+) = ([a-z0-9A-Z_]+)', row)
             var_name = tmp.group(1)
             var_value = tmp.group(2)
             characteristic[var_name] = var_value

@@ -33,12 +33,13 @@ class DifferentialCharacteristic(object):
         """
         data = []
         # Get data
+        state_names = set(getattr(self.cipher, "state_names", ()))
         for rnd in range(0, (self.num_rounds + 1) * self.msg_blocks):
             tmp_row = []
             for word in self.print_format:
                 try:
                     # Add word to table
-                    if word == 'w':
+                    if word.startswith('w') and word not in state_names:
                         weight = self.characteristic_data[word+str(rnd)]
                         # Strip 0x or #x if present
                         weight_clean = weight.replace("0x", "").replace("#x", "")
@@ -127,12 +128,13 @@ class DifferentialCharacteristic(object):
             for value in entry[:-1]: # Last entry should always be weight
                 new_node += str(value)
 
-            # Add label shortended to first two values
-            result += new_node + " [label=\"{},{}\"];\n".format(entry[0], entry[1]) 
+            # Add label shortened to first two values (or single value if 1-word state)
+            label_str = ",".join(str(v) for v in entry[:2])
+            result += new_node + f' [label="{label_str}"];\n'
             if last_node != "":
                 # Add edge
                 result += "{} -> {} [label=\"{}\"];\n".format(last_node, new_node, last_probability)
-            last_probability = entry[2]
+            last_probability = entry[-1] if entry else "0"
             last_node = new_node
         return result
 

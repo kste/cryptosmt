@@ -52,6 +52,8 @@ class ToolParameters:
     quiet: bool = False
     list_ciphers: bool = False
     is_interactive: bool = True
+    from_python: Optional[str] = None
+    export_cipher: Optional[str] = None
 
 
 def startsearch(params: ToolParameters):
@@ -66,7 +68,23 @@ def startsearch(params: ToolParameters):
             print(f"  - {name}")
         return
 
-    cipher = ciphers.get_cipher(params.cipher)
+    if params.from_python:
+        from transpiler import CipherSpecificationError, load_cipher_from_python
+        try:
+            cipher = load_cipher_from_python(params.from_python)
+        except (CipherSpecificationError, FileNotFoundError, ValueError, TypeError) as exc:
+            logger.error(f"\n{exc}")
+            return
+        if not params.quiet:
+            print(cipher.describe_model())
+        params.cipher = cipher.name
+        if not getattr(params, "_wordsize_overridden", False):
+            params.wordsize = cipher.default_wordsize
+        if params.export_cipher:
+            cipher.export_cipher_module(params.export_cipher, params.from_python)
+            logger.info(f"Exported synthesized cipher model to {params.export_cipher}")
+    else:
+        cipher = ciphers.get_cipher(params.cipher)
 
     if cipher is None:
         logger.error(f"Cipher {params.cipher} not supported!")
@@ -86,7 +104,7 @@ def startsearch(params: ToolParameters):
         del params_dict["rate"]
 
     # Remove CLI-only fields that shouldn't be passed to ciphers
-    for field_name in ["verbose", "quiet", "list_ciphers"]:
+    for field_name in ["verbose", "quiet", "list_ciphers", "from_python", "export_cipher"]:
         if field_name in params_dict:
             del params_dict[field_name]
 
@@ -171,6 +189,7 @@ def loadparameters(args) -> ToolParameters:
 
     if args.wordsize is not None:
         params.wordsize = args.wordsize[0]
+        params._wordsize_overridden = True
 
     if args.blocksize is not None:
         params.blocksize = args.blocksize[0]        
@@ -235,6 +254,12 @@ def loadparameters(args) -> ToolParameters:
     if args.list_ciphers:
         params.list_ciphers = args.list_ciphers
 
+    if args.from_python is not None:
+        params.from_python = args.from_python[0]
+
+    if args.export_cipher is not None:
+        params.export_cipher = args.export_cipher[0]
+
     import sys
     params.is_interactive = sys.stdout.isatty()
 
@@ -252,6 +277,8 @@ def main():
                             formatter_class=RawTextHelpFormatter)
 
     parser.add_argument('--cipher', nargs=1, help="Options: simon, speck, ...")
+    parser.add_argument('--from-python', nargs=1, help="Synthesize cipher model from a Python reference implementation.")
+    parser.add_argument('--export-cipher', nargs=1, help="Export the synthesized cipher model to a Python file.")
     parser.add_argument('--sweight', nargs=1, type=int,
                         help="Starting weight for the trail search.")
     parser.add_argument('--endweight', nargs=1, type=int,
